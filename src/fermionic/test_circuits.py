@@ -28,11 +28,10 @@ def fermion_circuit_matrix(
 ) -> np.ndarray:
     # must fix endianess
     qc = single_no_fermion_operator_circuit(op, theta, n_qubits, real)
-    print(qc)
     mat = Operator(qc).to_matrix()
     if "c-a" in [reg.name for reg in qc.qregs]:
         # pick out the section in which the ancilla qubit = 0
-        return mat[:2**(n_qubits+1):2, :2**(n_qubits+1):2]
+        return mat[::2, ::2]
     return mat
 
 def compare_circuit_to_matrix(
@@ -51,15 +50,63 @@ def compare_circuit_to_matrix(
 
     check_matrix = fermion_to_matrix(op, theta, n_qubits)
     if verbose:
-        print("check matrix:")
+        print("circuit:")
+        print(single_no_fermion_operator_circuit(operator, theta, n_qubits, real))
+        print("\ncheck matrix:")
         print(check_matrix)
         print("\ncircuit matrix:")
         print(circuit_matrix)
     return np.linalg.norm(check_matrix - circuit_matrix)
 
-nq = 2
-theta = 0.1
+from itertools import combinations
 
-op_part = FermionOperator("1^ 0", 1j)
+def get_sorted_subsets_of_size(iterable, size):
+  """
+  Generates all sorted subsets (combinations) of a given size from an iterable.
+
+  Args:
+    iterable: The input iterable (list, tuple, string, etc.).
+    size: The desired size (length) of the subsets.
+
+  Yields:
+    Each subset as a sorted tuple.
+  """
+  # The combinations function handles the generation and sorting internally
+  for subset in combinations(iterable, size):
+    yield subset
+"""
+nq = 2
+theta = 1.0
+
+op_part = FermionOperator("1^ 0^ 1 0", 1j)
 
 print(compare_circuit_to_matrix(op_part, theta, nq, False))
+"""
+
+max_order = 2
+max_qubits = 3
+theta = 1.0
+
+qubits_ind = list(range(max_qubits))
+
+for order in range(1, max_order + 1):
+    for r,coeff in zip([True, False], [1.0, 1j]):
+        for dec_order in range(order + 1):
+            inc_order = order - dec_order
+            inc_inds = list(get_sorted_subsets_of_size(qubits_ind, inc_order))
+            dec_inds = list(get_sorted_subsets_of_size(qubits_ind, dec_order))
+            for inc_ind in inc_inds:
+                for dec_ind in dec_inds:
+                    string = "".join([f"{i}^ " for i in inc_ind[::-1]]) + " " + "".join([f"{i} " for i in dec_ind[::-1]])
+                    op_part = FermionOperator(string, coeff)
+                    try:
+                        val = compare_circuit_to_matrix(op_part, theta, max_qubits, r, verbose=False)
+
+                        if val > 1e-12:
+                            print(f"Operator {op_part} has an error:")
+                            print(compare_circuit_to_matrix(op_part, theta, max_qubits, r, verbose=True))
+                            exit()
+
+                    except Exception as e:
+                        print(f"Operator {op_part} failed with: {e}")
+print("success")
