@@ -109,4 +109,5 @@ for order in range(1, max_order + 1):
 
                     except Exception as e:
                         print(f"Operator {op_part} failed with: {e}")
+                        exit()
 print("success")
