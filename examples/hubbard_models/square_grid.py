@@ -3,8 +3,6 @@ from openfermion import FermionOperator
 
 from examples.hubbard_models._primitives import hubbard_from_nx
 
-
-
 def square_grid_hubbard_model(size: int | tuple[int], h: float = 1.0, u: float = 0.5) -> FermionOperator:
     if isinstance(size, int):
         size = (size, size)
