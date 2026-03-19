@@ -41,7 +41,7 @@ def compute_bch_terms(
 ) -> list[any]:
 
     if bch_terms is None:
-        with open("_symmetric_bch.json", "r") as f:
+        with open("src/bch_formula/_symmetric_bch.json", "r") as f:
             bch_terms = json.load(f)
     if max_term == 3:
         return [compute_bch_terms_3(sum, commutator_func)]

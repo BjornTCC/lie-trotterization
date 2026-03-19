@@ -1,1 +1,1 @@
-from computation import compute_bch_terms
+from .computation import compute_bch_terms
