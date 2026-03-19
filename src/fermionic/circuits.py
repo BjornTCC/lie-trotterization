@@ -26,11 +26,13 @@ def single_no_fermion_operator_circuit(
 
     ads, coeff = list(operator.terms.items())[0]
 
+    int_list = [x[0] for x in ads]
+
     ctrl_up = set([x[0] for x in ads if x[1]])
     ctrl_down = set([x[0] for x in ads if not x[1]])
 
     if ctrl_up == ctrl_down:
-        return n_type_circuit(list(ctrl_up), num_qubits, np.imag(coeff), angle)
+        return n_type_circuit(list(ctrl_up), num_qubits, np.imag(coeff), angle).reverse_bits()
 
     n_bits = ctrl_up.intersection(ctrl_down)
 
@@ -41,8 +43,33 @@ def single_no_fermion_operator_circuit(
         n_bits,
         coeff,
         angle,
-        real
+        real,
+        int_list
     ).reverse_bits()
+
+
+def minSwaps(arr):
+    # Temporary array to store elements in sorted order
+    temp = sorted(arr, reverse=True)
+
+    # Hashing elements with their correct positions
+    pos = {}
+    for i in range(len(arr)):
+        pos[arr[i]] = i
+
+    swaps = 0
+    for i in range(len(arr)):
+        if temp[i] != arr[i]:
+            # Index of the element that should be at index i.
+            ind = pos[temp[i]]
+            arr[i], arr[ind] = arr[ind], arr[i]
+
+            # Update the indices in the dictionary
+            pos[arr[i]] = i
+            pos[arr[ind]] = ind
+
+            swaps += 1
+    return swaps
 
 def xy_type_circuit(
         num_qubits: int,
@@ -52,40 +79,67 @@ def xy_type_circuit(
         coeff: float,
         angle: float,
         real: bool,
+        int_list: list[int],
 ) -> QuantumCircuit:
-    # Needs to be adjusted for phase on passive qubits
-    if len(ctrl_up) == 0:
+    max_ind = np.argmax(list(ctrl_up) + list(ctrl_down))
+    max_val = (list(ctrl_up) + list(ctrl_down))[max_ind]
+    if max_val in ctrl_up:
         return xy_type_circuit(
             num_qubits,
             ctrl_down,
             ctrl_up,
             n_bits,
-            -coeff if real else coeff,
+            coeff if real else coeff,
             angle,
-            real
+            real,
+            int_list
         )
     else:
-        target_qubit = list(ctrl_up)[0]
-        ctrl_up_mod = ctrl_up - set([target_qubit])
+        target_qubit = max_val
+        ctrl_down_mod = ctrl_down - set([max_val])
 
         # Compute the qubits that introduce a phase
 
         z_intervals = sorted(list(ctrl_up) + list(ctrl_down))
 
-        phase_qubits = []
-        for k in range(len(z_intervals) - 1):
-            if (k % 2) == 0:
-                phase_qubits.extend([i for i in range(z_intervals[k] + 1, z_intervals[k+1])])
+        if len(z_intervals) == 1:
+            phase_qubits = list(range(0, z_intervals[0]))
+        else:
+            for k in range(len(z_intervals) - 1):
+                phase_qubits = []
+                if (k % 2) == 0:
+                    phase_qubits.extend([i for i in range(z_intervals[k] + 1, z_intervals[k+1])])
+
 
         register = QuantumRegister(num_qubits, name="sim")
         cr_circuit = QuantumCircuit(register)
-        ctrl_list = list(ctrl_up_mod) + list(ctrl_down) + list(n_bits)
+        ctrl_list = list(ctrl_up) + list(ctrl_down_mod) + list(n_bits)
+
+        sign = (-1)**(len(ctrl_up))
+
+        """
+        for y in ctrl_down:
+            if y < min(ctrl_up):
+                continue
+            else:
+                for x in ctrl_down:
+                    if x > y:
+                        sign *=-1
+        """
+        for n in n_bits:
+            for x in ctrl_up:
+                if x < n:
+                    sign*=-1
+            for x in ctrl_down:
+                if x > n:
+                    sign*=-1
+
         if real:
             if len(ctrl_list) > 0:
                 cr_circuit.mcx(ctrl_list, target_qubit)
-                cr_circuit.ry(-np.real(coeff) * angle, target_qubit)
+                cr_circuit.ry(np.real(coeff) * angle*sign, target_qubit)
                 cr_circuit.mcx(ctrl_list, target_qubit)
-                cr_circuit.ry(np.real(coeff) * angle, target_qubit)
+                cr_circuit.ry(-np.real(coeff) * angle*sign, target_qubit)
             else:
                 cr_circuit.ry(2*np.real(coeff) * angle, target_qubit)
         else:
@@ -98,18 +152,17 @@ def xy_type_circuit(
                 cr_circuit.rz(-2*np.imag(coeff) * angle, target_qubit)
 
         change_of_basis_circuit = QuantumCircuit(register)
-        for i in ctrl_up_mod:
+        for i in ctrl_up:
+            change_of_basis_circuit.cx(target_qubit, i)
+
+        for i in ctrl_down_mod:
             change_of_basis_circuit.cx(target_qubit, i)
             change_of_basis_circuit.x(i)
-
-        for i in ctrl_down:
-            change_of_basis_circuit.cx(target_qubit, i)
         if not real:
             change_of_basis_circuit.h(target_qubit)
 
         for i in phase_qubits:
             change_of_basis_circuit.cx(i, target_qubit)
-
 
         res = change_of_basis_circuit.compose(cr_circuit)
         res.compose(change_of_basis_circuit.inverse(), inplace = True)
@@ -123,7 +176,9 @@ def n_type_circuit(
 ) -> QuantumCircuit:
     register = QuantumRegister(num_qubits, name="sim")
 
-    if len(n_qubits) == 1:
+    if len(n_qubits) == 0:
+        cr_circuit = QuantumCircuit(register, global_phase=coeff * angle)
+    elif len(n_qubits) == 1:
         cr_circuit = QuantumCircuit(register, global_phase=coeff * angle / 2)
         cr_circuit.rz(coeff*angle, n_qubits)
     else:
@@ -162,10 +217,10 @@ if __name__ == "__main__":
 
     from qiskit.quantum_info import Operator
 
-    operator = FermionOperator("1^ 1", 1)
-    operator2 = FermionOperator("2^ 1", 1)
-    nq = 3
-    theta = 0.1
+    operator = FermionOperator("3^ 2^ 1 0", 1)
+    operator2 = FermionOperator()
+    nq = 4
+    theta = 1
 
     qc1 = single_no_fermion_operator_circuit(operator, theta, nq, True)
     qc2 = single_no_fermion_operator_circuit(operator2, theta, nq, True)

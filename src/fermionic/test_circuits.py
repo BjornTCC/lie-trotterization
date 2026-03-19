@@ -50,12 +50,19 @@ def compare_circuit_to_matrix(
 
     check_matrix = fermion_to_matrix(op, theta, n_qubits)
     if verbose:
-        print("circuit:")
+        print("\ncircuit:")
         print(single_no_fermion_operator_circuit(operator, theta, n_qubits, real))
-        print("\ncheck matrix:")
-        print(check_matrix)
-        print("\ncircuit matrix:")
-        print(circuit_matrix)
+        nq = n_qubits
+        print("\nNon-zero matrix elements of check matrix:")
+        for i in range(2 ** nq):
+            for j in range(2 ** nq):
+                if abs(check_matrix[i, j]) > 1e-10:
+                    print(format(i, f'0{nq}b') + "," + format(j, f'0{nq}b') + f": {check_matrix[i, j]}")
+        print("\nNon-zero matrix elements of circuit mat:")
+        for i in range(2 ** nq):
+            for j in range(2 ** nq):
+                if abs(circuit_matrix[i, j]) > 1e-10:
+                    print(format(i, f'0{nq}b') + "," + format(j, f'0{nq}b') + f": {circuit_matrix[i, j]}")
     return np.linalg.norm(check_matrix - circuit_matrix)
 
 from itertools import combinations
@@ -83,14 +90,25 @@ op_part = FermionOperator("1^ 0^ 1 0", 1j)
 print(compare_circuit_to_matrix(op_part, theta, nq, False))
 """
 
-max_order = 2
-max_qubits = 3
-theta = 1.0
+max_order = 4
+max_qubits = 4
+theta = np.pi/8
 
+operator = FermionOperator("3^ 2^ 1 0")
+print(operator)
+print(compare_circuit_to_matrix(operator, theta, max_qubits, True))
+operator = FermionOperator("3^ 1^ 2 0")
+print(operator)
+print(compare_circuit_to_matrix(operator, theta, max_qubits, True))
+
+#exit()
 qubits_ind = list(range(max_qubits))
 
 for order in range(1, max_order + 1):
+    if order % 2 != 0:
+        continue
     for r,coeff in zip([True, False], [1.0, 1j]):
+        #for dec_order in [order // 2]:
         for dec_order in range(order + 1):
             inc_order = order - dec_order
             inc_inds = list(get_sorted_subsets_of_size(qubits_ind, inc_order))
