@@ -11,5 +11,5 @@ with $\lambda_2 = -\sqrt[3]{2} \lambda_1 = -\sqrt[3]{2} / (2 -\sqrt[3]{2}) $.
 However, assuming access to the commutators $[A,[A,B]]$ and $[B,[A,B]]$, we can get a shorter formulae:
 
 $$
-    e^{t(A+B)} \approx e^{t A / 2} e^{t B/2} e^{\frac{t^3}{24} [A,[A,B]]} e^{\frac{t^3}{12} [B,[A,B]]} e^{t  B / 2} e^{t / 2}
+    e^{t(A+B)} = e^{t A / 2} e^{t B/2} e^{\frac{t^3}{24} [A,[A,B]]} e^{\frac{t^3}{12} [B,[A,B]]} e^{t  B / 2} e^{t A / 2} + O(t^5)
 $$
