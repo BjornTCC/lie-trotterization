@@ -10,7 +10,7 @@ from openfermion.utils import hermitian_conjugated
 
 from qiskit.quantum_info import Operator
 
-from circuits import single_no_fermion_operator_circuit
+from src.fermionic.circuits import single_no_fermion_operator_circuit
 
 
 def fermion_to_matrix(
