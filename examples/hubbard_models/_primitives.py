@@ -1,6 +1,7 @@
 import numpy as np
 
 from openfermion import FermionOperator
+from openfermion.transforms import normal_ordered
 
 import networkx as nx
 
@@ -26,7 +27,7 @@ def hubbard_from_nx(
             terms.append(
                 coeff*coulomb_interaction(*edge)
             )
-    return sum(terms)
+    return normal_ordered(sum(terms))
 
 def spinless_PPP_model(
         h: float,
@@ -48,10 +49,10 @@ def spinless_PPP_model(
             coeff = vij(nodei, nodej)
 
             terms.append(
-                coeff * coulomb_interaction(i,j)
+                coeff * coulomb_interaction(j,i)
             )
 
-    return sum(terms)
+    return normal_ordered(sum(terms))
 
 def ohno_potential_2d(
         graph: nx.Graph,
