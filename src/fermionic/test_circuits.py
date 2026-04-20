@@ -10,7 +10,7 @@ from openfermion.utils import hermitian_conjugated
 
 from qiskit.quantum_info import Operator
 
-from src.fermionic.circuits import single_no_fermion_operator_circuit
+from circuits import single_normal_ordered_fermion_operator_circuit
 
 
 def fermion_to_matrix(
@@ -19,6 +19,7 @@ def fermion_to_matrix(
         n_qubits: int
 ) -> np.ndarray:
     qubit_op = jordan_wigner(op)
+    #print(qubit_op)
     sparse_matrix = get_sparse_operator(qubit_op, n_qubits=n_qubits)
     return sp.linalg.expm(theta*sparse_matrix.todense())
 
@@ -29,7 +30,7 @@ def fermion_circuit_matrix(
         real: bool,
 ) -> np.ndarray:
     # must fix endianess
-    qc = single_no_fermion_operator_circuit(op, theta, n_qubits, real)
+    qc = single_normal_ordered_fermion_operator_circuit(op, theta, n_qubits, real)
     mat = Operator(qc).to_matrix()
     if "c-a" in [reg.name for reg in qc.qregs]:
         # pick out the section in which the ancilla qubit = 0
@@ -53,7 +54,7 @@ def compare_circuit_to_matrix(
     check_matrix = fermion_to_matrix(op, theta, n_qubits)
     if verbose:
         print("\ncircuit:")
-        print(single_no_fermion_operator_circuit(operator, theta, n_qubits, real))
+        print(single_normal_ordered_fermion_operator_circuit(operator, theta, n_qubits, real))
         nq = n_qubits
         print("\nNon-zero matrix elements of check matrix:")
         for i in range(2 ** nq):
@@ -91,26 +92,27 @@ print(compare_circuit_to_matrix(op_part, theta, nq, False))
 """
 
 if __name__ == "__main__":
-    max_order = 4
-    max_qubits = 4
+    max_order = 6
+    max_qubits = 6
     theta = np.pi/8
 
-    operator = FermionOperator("3^ 2^ 1 0")
-    print(operator)
-    print(compare_circuit_to_matrix(operator, theta, max_qubits, True))
-    operator = FermionOperator("3^ 1^ 2 0")
-    print(operator)
-    print(compare_circuit_to_matrix(operator, theta, max_qubits, True))
+    if False:
+        operator = 1*FermionOperator("1^ 0")
+        print(operator)
+        print(compare_circuit_to_matrix(operator, theta, max_qubits, "real"))
+        operator = 1*FermionOperator("0^ 1")
+        print(operator)
+        print(compare_circuit_to_matrix(operator, theta, max_qubits, "real"))
 
-    #exit()
+        exit()
     qubits_ind = list(range(max_qubits))
 
     for order in range(1, max_order + 1):
         if order % 2 != 0:
             continue
-        for r,coeff in zip([True, False], [1.0, 1j]):
-            #for dec_order in [order // 2]:
-            for dec_order in range(order + 1):
+        for r,coeff in zip(["real", "imag"], [1.0, 1j]):
+            for dec_order in [order // 2]:
+            #for dec_order in range(order + 1):
                 inc_order = order - dec_order
                 inc_inds = list(get_sorted_subsets_of_size(qubits_ind, inc_order))
                 dec_inds = list(get_sorted_subsets_of_size(qubits_ind, dec_order))
@@ -118,6 +120,7 @@ if __name__ == "__main__":
                     for dec_ind in dec_inds:
                         string = "".join([f"{i}^ " for i in inc_ind[::-1]]) + " " + "".join([f"{i} " for i in dec_ind[::-1]])
                         op_part = FermionOperator(string, coeff)
+                        print(op_part)
                         try:
                             val = compare_circuit_to_matrix(op_part, theta, max_qubits, r, verbose=False)
 
