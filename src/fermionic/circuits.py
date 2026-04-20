@@ -257,27 +257,3 @@ def compose_fermionic_circuits(
         res.compose(circuit2, inplace = True)
         if not inplace:
             return res
-
-
-if __name__ == "__main__":
-    from qiskit.quantum_info import Operator
-
-    operator = FermionOperator("2^ 1^ 0^ 3 1 0", 1)
-    nq = 4
-    theta = 0.1
-
-    qc = single_normal_ordered_fermion_operator_circuit(operator, theta, nq, "real")
-    print(qc)
-
-    print(f"(cos, sin) = ({np.cos(theta), np.sin(theta)})")
-    print(f"e^i*theta/2 = {np.exp(1j*theta/2)}")
-
-    mat = Operator(qc).to_matrix()
-    print("Non-zero matrix elements:")
-    for i in range(2**nq):
-        for j in range(2**nq):
-            if abs(mat[i,j]) > 1e-10:
-                print(format(i, f'0{nq}b') +"," + format(j, f'0{nq}b') + f": {mat[i,j]}")
-
-
-    Operator(qc).to_matrix()
