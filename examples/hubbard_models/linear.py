@@ -1,6 +1,4 @@
 from openfermion import FermionOperator
-from openfermion.transforms import normal_ordered
-
 from examples.hubbard_models._primitives import hubbard_from_nx, spinless_PPP_model, ohno_potential_2d
 
 import networkx as nx
@@ -28,7 +26,7 @@ def linear_double(size: int, h: float = 1.0, u1: float = 0.5, u2: float = 0.25):
     H = hubbard_from_nx(h, graph1, [(graph1, u1),(graph2, u2)])
     return H
 
-def linear_spinless_PPP(size: int, h: float = 1.0, U = 1.5, spacing: float = 2.0) -> FermionOperator:
+def linear_spinless_PPP(size: int, h: float = 1.0, U: float = 1.5, spacing: float = 2.0) -> FermionOperator:
     graph = linear_graph(size, with_positions=True)
     vij = ohno_potential_2d(graph, U, scale=spacing)
     return spinless_PPP_model(h, graph, vij)
