@@ -6,6 +6,47 @@ from qiskit import QuantumCircuit, QuantumRegister
 
 from openfermion.ops import FermionOperator
 
+def single_normal_ordered_fermion_operator_circuit(
+        operator: FermionOperator,
+        angle: float,
+        num_qubits: int,
+        tol: float = 1e-12,
+        type: str = ""
+) -> QuantumCircuit:
+    if len(operator.terms) == 0:
+        register = QuantumRegister(num_qubits, name="sim")
+        return QuantumCircuit(register)
+    assert len(operator.terms) <= 2, "Operator must contain at most 2 terms"
+    assert operator.is_normal_ordered(), "Operator must be normal ordered"
+
+    ads, coeff = list(operator.terms.items())[0]
+
+    int_list = [x[0] for x in ads]
+
+    ctrl_up = set([x[0] for x in ads if x[1]])
+    ctrl_down = set([x[0] for x in ads if not x[1]])
+
+    if ctrl_up == ctrl_down:
+        return n_type_circuit(list(ctrl_up), num_qubits, np.imag(coeff), angle).reverse_bits()
+
+    if abs(np.real(coeff)) < tol or type == "imag":
+        _type = "imag"
+    elif abs(np.imag(coeff)) < tol or type == "real":
+        _type = "real"
+    else:
+        _type = "mixed"
+
+    n_bits = ctrl_up.intersection(ctrl_down)
+
+    return xy_type_circuit(
+        list(ctrl_up - n_bits),
+        list(ctrl_down - n_bits),
+        list(n_bits),
+        num_qubits,
+        angle * coeff,
+        type = _type,
+    ).reverse_bits()
+
 def fswap(qc: QuantumCircuit, i: int, j: int, inplace: bool = True) -> QuantumCircuit | None:
     if inplace:
         qc.swap(i,j)
@@ -45,36 +86,6 @@ def get_fswap_network(
                     j -= 1
     return res
 
-def single_normal_ordered_fermion_operator_circuit(
-        operator: FermionOperator,
-        angle: float,
-        num_qubits: int,
-        type: str = "imag"
-) -> QuantumCircuit:
-    assert len(operator.terms) == 1, "Operator must contain a single term"
-    assert operator.is_normal_ordered(), "Operator must be normal ordered"
-
-    ads, coeff = list(operator.terms.items())[0]
-
-    int_list = [x[0] for x in ads]
-
-    ctrl_up = set([x[0] for x in ads if x[1]])
-    ctrl_down = set([x[0] for x in ads if not x[1]])
-
-    if ctrl_up == ctrl_down:
-        return n_type_circuit(list(ctrl_up), num_qubits, np.imag(coeff), angle).reverse_bits()
-
-    n_bits = ctrl_up.intersection(ctrl_down)
-
-    return xy_type_circuit(
-        list(ctrl_up - n_bits),
-        list(ctrl_down - n_bits),
-        list(n_bits),
-        num_qubits,
-        angle,
-        type = type,
-    ).reverse_bits()
-
 def compute_signs_due_to_n_bits(
         dag_indices: list[int],
         ndag_indices: list[int],
@@ -82,20 +93,16 @@ def compute_signs_due_to_n_bits(
 ) -> int:
     res = 1
     for i in n_bits:
-        res *= (-1)**(len([x for x in dag_indices if x < i]))
-        res *= (-1)**(len([x for x in ndag_indices if x > i]))
-        res *= (-1)**(len([x for x in n_bits if x < i]))
+        res *= (-1)**(len([x for x in dag_indices if x < i]) + len([x for x in ndag_indices if x > i]) + len([x for x in n_bits if x < i]))
     return res
 
-def xy_type_circuit(
-        dag_indices: list[int],
-        ndag_indices: list[int],
-        n_bits: list[int],
-        num_qubits: int,
-        angle: float | complex,
-        type: str = "real"
-) -> QuantumCircuit:
-    # Permute into standard form
+def compute_fermionic_permutation(
+    register: QuantumRegister,
+    dag_indices: list[int],
+    ndag_indices: list[int],
+    n_bits: list[int],
+) -> tuple[QuantumCircuit, tuple, tuple, list]:
+
     all_indices = dag_indices + ndag_indices + n_bits
     max_pos, min_pos = np.argmax(all_indices), np.argmin(all_indices)
     max_index, min_index = all_indices[max_pos], all_indices[min_pos]
@@ -106,15 +113,15 @@ def xy_type_circuit(
 
     # Compute the desired permutation
     inverse_permutation = {}
-    for i,j in enumerate(n_bits):
+    for i, j in enumerate(n_bits):
         inverse_permutation[min_index + i] = j
-    for i,j in enumerate(sorted(ndag_indices)):
+    for i, j in enumerate(sorted(ndag_indices)):
         inverse_permutation[min_index + len(n_bits) + i] = j
-    for i,j in enumerate(sorted(dag_indices)):
+    for i, j in enumerate(sorted(dag_indices)):
         inverse_permutation[min_index + len(n_bits) + len(ndag_indices) + i] = j
 
-    remaining_indices = list(range(min_index)) + list(range(min_index + len(n_bits) + len(ndag_indices) + len(dag_indices), max_index +1))
-    permutation_dict = {x:y for y,x in inverse_permutation.items()}
+    remaining_indices = list(range(min_index)) + list(range(min_index + len(n_bits) + len(ndag_indices) + len(dag_indices), max_index + 1))
+    permutation_dict = {x: y for y, x in inverse_permutation.items()}
     permutation = []
 
     rem_index = 0
@@ -125,8 +132,20 @@ def xy_type_circuit(
             permutation.append(remaining_indices[rem_index])
             rem_index += 1
 
-    register = QuantumRegister(num_qubits, name="sim")
     fswap_network = get_fswap_network(register, permutation)
+
+    return fswap_network, dag_tup, ndag_tup, n_list
+
+def xy_type_circuit(
+        dag_indices: list[int],
+        ndag_indices: list[int],
+        n_bits: list[int],
+        num_qubits: int,
+        angle: float | complex,
+        type: str = "real"
+) -> QuantumCircuit:
+    register = QuantumRegister(num_qubits, name="sim")
+    fswap_network, dag_tup, ndag_tup, n_list = compute_fermionic_permutation(register, dag_indices, ndag_indices, n_bits)
 
     # compute some signs due to permutation
     n_sign = compute_signs_due_to_n_bits(dag_indices, ndag_indices, n_bits)
@@ -145,11 +164,13 @@ def xy_type_circuit_baseline(
 ) -> QuantumCircuit:
     match type:
         case "real":
-            return xy_type_circuit_baseline_real(dag_indices, ndag_indices, n_type_bits, num_qubits, angle)
+            return xy_type_circuit_baseline_real(dag_indices, ndag_indices, n_type_bits, num_qubits, np.real(angle))
         case "imag":
-            return xy_type_circuit_baseline_imag(dag_indices, ndag_indices, n_type_bits, num_qubits, angle)
+            return xy_type_circuit_baseline_imag(dag_indices, ndag_indices, n_type_bits, num_qubits, np.imag(angle))
+        case "mixed":
+            return xy_type_circuit_baseline_mixed(dag_indices, ndag_indices, n_type_bits, num_qubits, angle)
         case _:
-            raise ValueError("Not implemented yet")
+            raise ValueError("Not implemented")
 
 def get_change_of_basis_circuit(
         dag_indices: tuple[int,int],
@@ -214,6 +235,36 @@ def xy_type_circuit_baseline_imag(
     res = change_of_basis_circuit.compose(cr_circuit)
     return res.compose(change_of_basis_circuit.inverse())
 
+def xy_type_circuit_baseline_mixed(
+        dag_indices: tuple[int, int],
+        ndag_indices: tuple[int, int],
+        n_type_bits: list[int],
+        num_qubits: int,
+        angle: complex,
+) -> QuantumCircuit:
+    register = QuantumRegister(num_qubits, name="sim")
+    change_of_basis_circuit = get_change_of_basis_circuit(dag_indices, ndag_indices, n_type_bits, register)
+
+    alpha = np.real(angle)
+    beta = np.imag(angle)
+
+    t = np.sqrt(alpha**2 + beta**2)
+    theta = 0.5*np.atan2(alpha,beta)
+
+    cr_circuit = QuantumCircuit(register)
+    ctrl_qubits = list(range(ndag_indices[0], dag_indices[1])) + n_type_bits
+    cr_circuit.h(dag_indices[1])
+    cr_circuit.rx(theta*2, dag_indices[1])
+    cr_circuit.mcx(ctrl_qubits, dag_indices[1], ctrl_state=0)
+    cr_circuit.rz(t, dag_indices[1])
+    cr_circuit.mcx(ctrl_qubits, dag_indices[1], ctrl_state=0)
+    cr_circuit.rz(-t, dag_indices[1])
+    cr_circuit.rx(-theta*2, dag_indices[1])
+    cr_circuit.h(dag_indices[1])
+
+    res = change_of_basis_circuit.compose(cr_circuit)
+    return res.compose(change_of_basis_circuit.inverse())
+
 def n_type_circuit(
         n_qubits: list[int],
         num_qubits: int,
@@ -257,3 +308,7 @@ def compose_fermionic_circuits(
         res.compose(circuit2, inplace = True)
         if not inplace:
             return res
+
+if __name__ == "__main__":
+    op = FermionOperator("0^ 1", 1.0) - FermionOperator("1^ 0", 1.0)
+    print(single_normal_ordered_fermion_operator_circuit(op, np.pi/8, 6))
