@@ -8,10 +8,34 @@ import networkx as nx
 def site_hopping(i: int, j: int) -> FermionOperator:
     return FermionOperator(((i,1),(j,0)), 1j) + FermionOperator(((j,1),(i,0)), 1j)
 
-def coulomb_interaction(i: int, j: int) -> FermionOperator:
-    return FermionOperator(((i,1),(i,0), (j,1),(j,0),), 1j)
-
 def hubbard_from_nx(
+    h: float,
+    u: float,
+    hopping_graph: nx.Graph,
+) -> FermionOperator:
+
+    N = len(hopping_graph.nodes)
+
+    spin_orbital_to_index = {
+        (i,s): s*N + i for i in hopping_graph.nodes for s in [0,1]
+    }
+
+    terms = []
+
+    for edge in hopping_graph.edges:
+        for s in [0,1]:
+            terms.append(
+                h*site_hopping(*[spin_orbital_to_index[(e,s)] for e in edge])
+            )
+
+    for n in hopping_graph.nodes:
+        terms.append(u*coulomb_interaction(
+            spin_orbital_to_index[(n,0)], spin_orbital_to_index[(n,1)]
+        ))
+
+    return normal_ordered(sum(terms))
+
+def coulomb_spinless_hamiltonian(
         h: float,
         hopping_graph: nx.Graph,
         coulomb_graphs: list[tuple[nx.Graph, float]] = [],
@@ -28,6 +52,9 @@ def hubbard_from_nx(
                 coeff*coulomb_interaction(*edge)
             )
     return normal_ordered(sum(terms))
+
+def coulomb_interaction(i: int, j: int) -> FermionOperator:
+    return FermionOperator(((i,1),(i,0), (j,1),(j,0),), 1j)
 
 def spinless_PPP_model(
         h: float,

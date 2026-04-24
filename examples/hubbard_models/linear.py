@@ -1,5 +1,5 @@
 from openfermion import FermionOperator
-from examples.hubbard_models._primitives import hubbard_from_nx, spinless_PPP_model, ohno_potential_2d
+from examples._primitives import hubbard_from_nx, spinless_PPP_model, ohno_potential_2d, coulomb_spinless_hamiltonian
 
 import networkx as nx
 
@@ -14,16 +14,16 @@ def linear_graph(size: int, with_positions: bool = False) -> nx.Graph:
         nx.set_node_attributes(g, pos, name="pos")
     return g
 
-def linear_hubbard_model(size: int, h: float = 1.0, u: float = 0.5) -> FermionOperator:
+def linear_hubbard_model(size: int, h: float = 1.0, U: float = 0.5) -> FermionOperator:
     graph = linear_graph(size)
-    H = hubbard_from_nx(h, graph, [(graph, u)])
+    H = hubbard_from_nx(h, U, graph)
     return H
 
 def linear_double(size: int, h: float = 1.0, u1: float = 0.5, u2: float = 0.25):
     graph1 = linear_graph(size)
     graph2 = nx.Graph()
     graph2.add_edges_from([(i,i+2) for i in range(size - 2)])
-    H = hubbard_from_nx(h, graph1, [(graph1, u1),(graph2, u2)])
+    H = coulomb_spinless_hamiltonian(h, graph1, [(graph1, u1),(graph2, u2)])
     return H
 
 def linear_spinless_PPP(size: int, h: float = 1.0, U: float = 1.5, spacing: float = 2.0) -> FermionOperator:

@@ -1,6 +1,6 @@
 import numpy as np
 
-from ._primitives import site_hopping
+from examples._primitives import site_hopping
 
 from openfermion import FermionOperator
 
