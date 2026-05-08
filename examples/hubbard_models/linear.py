@@ -3,8 +3,10 @@ from examples._primitives import hubbard_from_nx, spinless_PPP_model, ohno_poten
 
 import networkx as nx
 
-def linear_graph(size: int, with_positions: bool = False) -> nx.Graph:
+def linear_graph(size: int, with_positions: bool = False, periodic: bool = True) -> nx.Graph:
     edges = [(i,i+1) for i in range(size - 1)]
+    if periodic:
+        edges += [(0, size-1)]
     g = nx.Graph()
     g.add_edges_from(edges)
     if with_positions:
