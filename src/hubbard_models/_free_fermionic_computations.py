@@ -210,7 +210,67 @@ def _commutator_of_graph_and_digraph(G1: nx.graph, G2: nx.DiGraph) -> nx.Graph:
     return res
 
 def _commutator_of_digraphs(G1: nx.DiGraph, G2: nx.DiGraph) -> nx.DiGraph:
-    raise ValueError("not implemented yet")
+    res = nx.DiGraph()
+    nodes = set(G1.nodes).union(G2.nodes)
+    res.add_nodes_from(nodes)
+    G2_rev = G2.reverse()
+
+    if nx.is_weighted(G1):
+        edge_weights_1 = {edge: G1[edge[0]][edge[1]][["weight"]] for edge in G1.edges}
+    else:
+        edge_weights_1 = {edge: 1 for edge in G1.edges}
+
+    if nx.is_weighted(G2):
+        edge_weights_2 = {edge: G2[edge[0]][edge[1]][["weight"]] for edge in G2.edges}
+    else:
+        edge_weights_2 = {edge: 1 for edge in G2.edges}
+
+    edge_weights_1.update({x[::-1]: y for x, y in edge_weights_1.items()})
+    edge_weights_2.update({x[::-1]: -y for x, y in edge_weights_2.items()})
+
+    for edge in G1.edges:
+        n1 = edge[0]
+        n2 = edge[1]
+
+        ad_nodes1 = G2.neighbors(n1)
+        for other_node in ad_nodes1:
+            w = edge_weights_1[edge] * edge_weights_2[(n1, other_node)]
+            if res.has_edge(n2, other_node):
+                res[n2][other_node]['weight'] += -w
+
+            else:
+                res.add_edge(n2, other_node, weight=-w)
+
+        ad_nodes2 = G2.neighbors(n2)
+        for other_node in ad_nodes2:
+            w = edge_weights_1[edge] * edge_weights_2[(n2, other_node)]
+            if res.has_edge(n1, other_node):
+                res[n1][other_node]['weight'] += w
+
+            else:
+                res.add_edge(n1, other_node, weight=w)
+
+        ad_nodes3 = G2_rev.neighbors(n1)
+        for other_node in ad_nodes3:
+            w = edge_weights_1[edge] * edge_weights_2[(other_node, n1)]
+            if res.has_edge(n2, other_node):
+                res[n2][other_node]['weight'] += w
+
+            else:
+                res.add_edge(n2, other_node, weight=w)
+
+        ad_nodes4 = G2_rev.neighbors(n2)
+        for other_node in ad_nodes4:
+            w = edge_weights_1[edge] * edge_weights_2[(other_node, n2)]
+            if res.has_edge(n1, other_node):
+                res[n1][other_node]['weight'] += -w
+
+            else:
+                res.add_edge(n1, other_node, weight=-w)
+
+    _remove_zero_weight_edges(res, copy=False)
+
+    return res
 
 def _remove_zero_weight_edges(G: nx.Graph, copy: bool = False) -> nx.Graph:
     graph_to_modify = G.copy() if copy else G
@@ -238,12 +298,12 @@ def _flip_edge_weights(G: nx.Graph, copy: bool = False) -> nx.Graph:
 
 # --- Example Usage ---
 if __name__ == "__main__":
-    G1 = nx.Graph()
-    G1.add_nodes_from([0,1,2,3])
-    G1.add_edges_from([(0,1), (2,3)])
+    G1 = nx.DiGraph()
+    G1.add_nodes_from([0,1,2])
+    G1.add_edges_from([(0,1)])
     G2 = nx.DiGraph()
-    G2.add_nodes_from([0,1,2,3])
-    G2.add_edges_from([(1,2), (0,3)])
+    G2.add_nodes_from([0,1,2])
+    G2.add_edges_from([(1,2)])
 
     import matplotlib.pyplot as plt
 
