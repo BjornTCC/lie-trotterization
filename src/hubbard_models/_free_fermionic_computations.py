@@ -2,16 +2,15 @@
 Contains primitives for computing free-fermionic quantities using the fact that free fermionic systems are efficiently simulable.
 """
 
+from functools import singledispatch
+from typing import TypeVar, Union
+
 import networkx as nx
 import numpy as np
 from openfermion.ops import FermionOperator
 from openfermion.utils import commutator
 from openfermion.transforms import normal_ordered
 
-from functools import singledispatch
-from typing import TypeVar, Union
-
-# Define a TypeVar to ensure type consistency (Input Type = Output Type)
 T = TypeVar('T', np.ndarray, FermionOperator, nx.Graph, nx.DiGraph)
 
 def spectral_norm_of_free_fermionic_operator(
@@ -19,6 +18,10 @@ def spectral_norm_of_free_fermionic_operator(
 ) -> float:
     casted_data = cast_data_to_array(data)
     return np.linalg.norm(casted_data)
+
+@singledispatch
+def ff_commutator(op1: T, op2: T) -> T:
+    raise TypeError(f"Unsupported type: {type(data)}")
 
 @singledispatch
 def cast_data_to_array(data: T) -> np.ndarray:
@@ -66,10 +69,6 @@ def _(data: nx.Graph) -> np.ndarray:
 def _(data: nx.DiGraph) -> np.ndarray:
     ad_mat = nx.adjacency_matrix(data, dtype = np.complex128).toarray()
     return ad_mat - np.conj(np.transpose(ad_mat))
-
-@singledispatch
-def ff_commutator(op1: T, op2: T) -> T:
-    raise TypeError(f"Unsupported type: {type(data)}")
 
 @ff_commutator.register(np.ndarray)
 def _(op1: np.ndarray, op2: np.ndarray) -> np.ndarray:
