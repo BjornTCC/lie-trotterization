@@ -45,27 +45,64 @@ def compute_bch_terms(
             bch_terms = json.load(f)
     if max_term == 3:
         return [compute_bch_terms_3(sum, commutator_func)]
+    elif max_term == 5:
+        return [compute_bch_terms_3(sum, commutator_func), compute_bch_terms_5(sum, commutator_func)]
     else:
         raise ValueError("not implemented yet")
 
 def compute_bch_terms_3(
-        sum: list[any],
+        terms: list[any],
         commutator_func: any,
 ) -> any:
-    if len(sum) == 1:
-        return 0.0
+    c = commutator_func
 
-    A = sum[0]
-    B = deepcopy(sum[1])
-    for t in sum[2:]:
-        B += t
+    res = 0.0
 
-    C = commutator_func(A,B)
+    for i in range(len(terms)):
+        A = -terms[i]
+        B = sum(terms[i:])
+        res -= c(A,c(A,B)) / 24 + c(B,c(A,B)) / 12
 
-    T1 = -commutator_func(A,C) * 1/24
-    T2 = -commutator_func(B,C) * 1/12
+    #print("\ncub:",res)
+    return res
 
-    return T1 + T2 + compute_bch_terms_3(sum[1:], commutator_func)
+def compute_bch_terms_5(
+        terms: list[any],
+        commutator_func: any,
+) -> any:
+    c = commutator_func
+
+    res = 0.0
+
+    for i in range(len(terms)):
+        A = -terms[i]
+        B = sum(terms[i:])
+        #print("\nB:")
+        #print(B)
+
+        cubic_term = compute_bch_terms_3(terms[i+1:], c)
+
+        #print(f"\ncubic_term:")
+        #print(cubic_term)
+
+        T0 = c(A,c(A,cubic_term)) * (-1/24)
+
+        T1 = c(A,c(A,c(A,c(A,B)))) * (7.0/5760)
+        T2 = c(A,c(A,c(c(A,B),B))) * (-7.0/1440)
+        T3 = c(c(A,c(A,B)),c(A,B)) * (1.0/360)
+        T4 = c(A,c(c(c(A,B),B),B)) * (1.0/180)
+        T5 = c(c(A,B),c(c(A,B),B)) * (1.0/120)
+        T6 = c(c(c(c(A,B),B),B),B) * (-1.0/720)
+
+        #for i,t in enumerate([T0,T1,T2,T3,T4,T5,T6]):
+        #    print(f"\nT{i}:")
+        #    print(t)
+
+        res += T0 + T1 + T2 + T3 + T4 + T5 + T6
+
+    #print("\n5th:")
+    #print(res)
+    return res
 
 def compute_bch_terms_rec(
         sum: list[any],

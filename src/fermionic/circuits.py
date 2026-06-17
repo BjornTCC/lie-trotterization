@@ -310,5 +310,5 @@ def compose_fermionic_circuits(
             return res
 
 if __name__ == "__main__":
-    op = FermionOperator("0^ 1", 1.0) - FermionOperator("1^ 0", 1.0)
-    print(single_normal_ordered_fermion_operator_circuit(op, np.pi/8, 6))
+    op = FermionOperator("0^ 1", 1j) + FermionOperator("1^ 0", 1j)
+    print(single_normal_ordered_fermion_operator_circuit(op, np.pi/8, 2))

@@ -12,17 +12,6 @@ from qiskit.quantum_info import Operator
 
 from src.fermionic.circuits import single_normal_ordered_fermion_operator_circuit
 
-
-def fermion_to_matrix(
-        op: FermionOperator,
-        theta: float,
-        n_qubits: int
-) -> np.ndarray:
-    qubit_op = jordan_wigner(op)
-    #print(qubit_op)
-    sparse_matrix = get_sparse_operator(qubit_op, n_qubits=n_qubits)
-    return sp.linalg.expm(theta*sparse_matrix.todense())
-
 def fermion_circuit_matrix(
         op: FermionOperator,
         theta: float,
