@@ -29,4 +29,4 @@ def rus_rotation_cost(theta: float | list[float], eps: float) -> int:
         nr = 1
     else:
         nr = len(theta)
-    return math.ceil(nr * (1.149 * np.log2(nr / eps)+9.2))
+    return math.ceil(nr * (1.149 * np.log2(nr / eps) + 9.2))
