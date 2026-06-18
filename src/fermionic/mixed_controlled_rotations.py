@@ -2,10 +2,13 @@ from copy import deepcopy
 
 import numpy as np
 
+from circuits import fswap
 from qiskit import QuantumCircuit, QuantumRegister
+from openfermion.ops import QubitOperator, FermionOperator
 
 def mixed_control_kappa_baseline(tau: float) -> QuantumCircuit:
-    qc = QuantumCircuit(4)
+    register = QuantumRegister(4, name="sim")
+    qc = QuantumCircuit(register)
     qc.cx(3,2)
     qc.ccx(0,2,3)
     qc.ry(-tau, 3)
@@ -17,7 +20,8 @@ def mixed_control_kappa_baseline(tau: float) -> QuantumCircuit:
     return qc.reverse_bits()
 
 def mixed_control_happa_baseline(tau: float) -> QuantumCircuit:
-    qc = QuantumCircuit(4)
+    register = QuantumRegister(4, name="sim")
+    qc = QuantumCircuit(register)
     qc.cx(3,2)
     qc.h(3)
     qc.ccx(0,2,3)
@@ -30,6 +34,83 @@ def mixed_control_happa_baseline(tau: float) -> QuantumCircuit:
     qc.cx(3,2)
     return qc.reverse_bits()
 
+def _kappa_spin_change_of_basis() -> QuantumCircuit:
+    register = QuantumRegister(4, name="sim")
+    qc = QuantumCircuit(register)
+    qc.cx([1,3], [0,2])
+    qc.cx([0,2], [1,3])
+    qc.sdg([1,3])
+    qc.h([1, 3])
+    qc.tdg([1, 3])
+    qc.h([1, 3])
+    qc.s([1, 3])
+
+    qc.cx([0,2], [1,3])
+    qc.sdg([1,3])
+    qc.h([1, 3])
+    qc.t([1, 3])
+    qc.h([1, 3])
+    qc.s([1, 3])
+    qc.cx([1,3], [0,2])
+
+    return qc
+
+def spin_conjoined_mixed_control_kappa_baseline(tau: float) -> QuantumCircuit:
+    register = QuantumRegister(4, name="sim")
+    ancilla_register = QuantumRegister(1, name="c-a")
+    qc = QuantumCircuit(register, ancilla_register)
+
+    cob = _kappa_spin_change_of_basis()
+
+    qc.compose(cob, qubits = register, inplace = True)
+
+    fswap(qc, 1,2)
+
+    qc.cx(3,2)
+    qc.cx(3,1)
+    qc.cx(3,0)
+    qc.x(2)
+    qc.ccx(0,1,ancilla_register[0])
+    qc.ccx(2,ancilla_register[0], 3)
+
+    qc.ry(-2*tau, 3)
+    qc.ccx(2,ancilla_register[0], 3)
+    qc.ccx(0,1,ancilla_register[0])
+    qc.ry(2*tau, 3)
+    qc.x(2)
+    qc.cx(3,0)
+    qc.cx(3,1)
+    qc.cx(3,2)
+    fswap(qc, 2,1)
+
+    qc.compose(cob.inverse(), qubits = register, inplace = True)
+    return qc.reverse_bits()
+
+def spin_conjoined_mixed_control_happa_baseline(tau: float) -> QuantumCircuit:
+    register = QuantumRegister(4, name="sim")
+    ancilla_register = QuantumRegister(1, name="c-a")
+    qc = QuantumCircuit(register, ancilla_register)
+
+    cob = _kappa_spin_change_of_basis()
+
+    qc.compose(cob, qubits = register, inplace = True)
+
+    qc.cx(3,2)
+    qc.cx(0,1)
+    qc.cx(3,0)
+    qc.ccx(0,1,ancilla_register[0])
+    qc.ccx(2,ancilla_register[0], 3)
+    qc.rz(-2*tau, 3)
+    qc.ccx(2,ancilla_register[0], 3)
+    qc.ccx(0,1,ancilla_register[0])
+    qc.rz(2*tau, 3)
+    qc.cx(3,0)
+    qc.cx(0,1)
+    qc.cx(3,2)
+
+    qc.compose(cob.inverse(), qubits = register, inplace = True)
+    return qc.reverse_bits()
+
 if __name__ == "__main__":
     import scipy as sp
     from openfermion.ops import QubitOperator, FermionOperator
@@ -40,6 +121,9 @@ if __name__ == "__main__":
     from qiskit.quantum_info import Operator
 
     def print_non_zero_matrix_elements(matrix: np.ndarray, nbits: int, tol:float = 1e-10) -> None:
+
+
+        #print(mat)
         d = 2**nbits
         for i in range(d):
             for j in range(d):
@@ -58,13 +142,25 @@ if __name__ == "__main__":
         return sp.linalg.expm(theta * sparse_matrix.todense())
 
 
-    tau = 0.1
+    tau = np.pi/4
 
-    kappa_op = 1j*(FermionOperator("3^ 2", 1.0) + FermionOperator("2^ 3", 1.0)) * (FermionOperator("0^ 0", 1.0) - FermionOperator("1^ 1", 1.0))**2
+    #kappa_op = 1j*(FermionOperator("3^ 2", 1.0) + FermionOperator("2^ 3", 1.0)) * (FermionOperator("0^ 0", 1.0) - FermionOperator("1^ 1", 1.0))**2
+    #kappa_op = FermionOperator("1^ 0") + FermionOperator("3^ 2") - FermionOperator("0^ 1") - FermionOperator("2^ 3")
+    #kappa_op = (FermionOperator("3^ 2", 1.0) - FermionOperator("2^ 3", 1.0)) * (FermionOperator("0^ 0", 1.0) - FermionOperator("1^ 1", 1.0)) +  (FermionOperator("1^ 0", 1.0) - FermionOperator("0^ 1", 1.0)) * (FermionOperator("2^ 2", 1.0) - FermionOperator("3^ 3", 1.0))
+    kappa_op = 1j*(FermionOperator("3^ 2", 1.0) + FermionOperator("2^ 3", 1.0)) * (
+                FermionOperator("0^ 0", 1.0) - FermionOperator("1^ 1", 1.0))**2 + 11", 1.0)) * (
+                           FermionOperator("2^ 2", 1.0) - FermionOperator("3^ 3", 1.0))**2
+
     kappa_mat = fermion_to_matrix(kappa_op, tau, 4)
 
-    qc = mixed_control_happa_baseline(tau)
+    qc = spin_conjoined_mixed_control_happa_baseline(tau)
+    qc_mat = Operator(qc).to_matrix()
     print(qc)
-    print_non_zero_matrix_elements(Operator(qc).to_matrix(), 4)
+    print_non_zero_matrix_elements(qc_mat[::2,::2], 4)
     print()
     print_non_zero_matrix_elements(kappa_mat,4)
+    print(np.allclose(qc_mat[::2,::2], kappa_mat))
+
+
+j*(
+                           FermionOperator("1^ 0", 1.0) + FermionOperator("0^
