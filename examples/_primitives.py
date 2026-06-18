@@ -36,15 +36,20 @@ def hubbard_from_nx(
     return normal_ordered(sum(terms))
 
 def coulomb_spinless_hamiltonian(
-        h: float,
+        h: float | None,
         hopping_graph: nx.Graph,
         coulomb_graphs: list[tuple[nx.Graph, float]] = [],
 ) -> FermionOperator:
     terms = []
     for edge in hopping_graph.edges:
-        terms.append(
-            h*site_hopping(*edge)
-        )
+        if h is None:
+            terms.append(
+                np.random.uniform()*site_hopping(*edge)
+            )
+        else:
+            terms.append(
+                h * site_hopping(*edge)
+            )
 
     for coulomb_graph, coeff in coulomb_graphs:
         for edge in coulomb_graph.edges:
