@@ -148,7 +148,8 @@ if __name__ == "__main__":
     #kappa_op = FermionOperator("1^ 0") + FermionOperator("3^ 2") - FermionOperator("0^ 1") - FermionOperator("2^ 3")
     #kappa_op = (FermionOperator("3^ 2", 1.0) - FermionOperator("2^ 3", 1.0)) * (FermionOperator("0^ 0", 1.0) - FermionOperator("1^ 1", 1.0)) +  (FermionOperator("1^ 0", 1.0) - FermionOperator("0^ 1", 1.0)) * (FermionOperator("2^ 2", 1.0) - FermionOperator("3^ 3", 1.0))
     kappa_op = 1j*(FermionOperator("3^ 2", 1.0) + FermionOperator("2^ 3", 1.0)) * (
-                FermionOperator("0^ 0", 1.0) - FermionOperator("1^ 1", 1.0))**2 + 11", 1.0)) * (
+                FermionOperator("0^ 0", 1.0) - FermionOperator("1^ 1", 1.0))**2 + 1j*(
+                           FermionOperator("1^ 0", 1.0) + FermionOperator("0^ 1", 1.0)) * (
                            FermionOperator("2^ 2", 1.0) - FermionOperator("3^ 3", 1.0))**2
 
     kappa_mat = fermion_to_matrix(kappa_op, tau, 4)
@@ -162,5 +163,3 @@ if __name__ == "__main__":
     print(np.allclose(qc_mat[::2,::2], kappa_mat))
 
 
-j*(
-                           FermionOperator("1^ 0", 1.0) + FermionOperator("0^
