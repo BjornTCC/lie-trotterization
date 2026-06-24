@@ -3,7 +3,8 @@ Contains primitives for computing free-fermionic quantities using the fact that 
 """
 
 from functools import singledispatch
-from typing import TypeVar, Union
+from typing import TypeVar
+import warnings
 
 import networkx as nx
 import numpy as np
@@ -12,6 +13,12 @@ from openfermion.utils import commutator
 from openfermion.transforms import normal_ordered
 
 T = TypeVar('T', np.ndarray, FermionOperator, nx.Graph, nx.DiGraph)
+
+# Warning messages
+
+node_reordering_warning = "When computing free fermionic commutator performed between graphs with different nodes the ordering of nodes may change in the result."
+
+# Utility functions
 
 def spectral_norm_of_free_fermionic_operator(
         data: T
@@ -30,6 +37,8 @@ def cast_data_to_array(data: T) -> np.ndarray:
     doesn't match any of the registered types below.
     """
     raise TypeError(f"Unsupported type: {type(data)}")
+
+# Workhorse code
 
 @cast_data_to_array.register(np.ndarray)
 def _(data: np.ndarray) -> np.ndarray:
@@ -103,7 +112,11 @@ def _(op1: nx.DiGraph, op2: nx.Graph | nx. DiGraph) -> nx.DiGraph | nx.Graph:
 
 def _commutator_of_graphs(G1: nx.Graph, G2: nx.Graph) -> nx.DiGraph:
     res = nx.DiGraph()
-    nodes = set(G1.nodes).union(G2.nodes)
+    if G1.nodes == G2.nodes:
+        nodes = G1.nodes # This keeps the node ordering of G1
+    else:
+        nodes = set(G1.nodes).union(G2.nodes)
+        warnings.warn(node_reordering_warning)
     res.add_nodes_from(nodes)
     if nx.is_weighted(G1):
         edge_weights_1 = {edge: G1[edge[0]][edge[1]][["weight"]] for edge in G1.edges}
@@ -147,17 +160,21 @@ def _commutator_of_graphs(G1: nx.Graph, G2: nx.Graph) -> nx.DiGraph:
 
 def _commutator_of_graph_and_digraph(G1: nx.graph, G2: nx.DiGraph) -> nx.Graph:
     res = nx.Graph()
-    nodes = set(G1.nodes).union(G2.nodes)
+    if G1.nodes == G2.nodes:
+        nodes = G1.nodes # This keeps the node ordering of G1
+    else:
+        nodes = set(G1.nodes).union(G2.nodes)
+        warnings.warn(node_reordering_warning)
     res.add_nodes_from(nodes)
     G2_rev = G2.reverse()
 
     if nx.is_weighted(G1):
-        edge_weights_1 = {edge: G1[edge[0]][edge[1]][["weight"]] for edge in G1.edges}
+        edge_weights_1 = {edge: G1[edge[0]][edge[1]]["weight"] for edge in G1.edges}
     else:
         edge_weights_1 = {edge: 1 for edge in G1.edges}
 
     if nx.is_weighted(G2):
-        edge_weights_2 = {edge: G2[edge[0]][edge[1]][["weight"]] for edge in G2.edges}
+        edge_weights_2 = {edge: G2[edge[0]][edge[1]]["weight"] for edge in G2.edges}
     else:
         edge_weights_2 = {edge: 1 for edge in G2.edges}
 
@@ -210,7 +227,11 @@ def _commutator_of_graph_and_digraph(G1: nx.graph, G2: nx.DiGraph) -> nx.Graph:
 
 def _commutator_of_digraphs(G1: nx.DiGraph, G2: nx.DiGraph) -> nx.DiGraph:
     res = nx.DiGraph()
-    nodes = set(G1.nodes).union(G2.nodes)
+    if G1.nodes == G2.nodes:
+        nodes = G1.nodes # This keeps the node ordering of G1
+    else:
+        nodes = set(G1.nodes).union(G2.nodes)
+        warnings.warn(node_reordering_warning)
     res.add_nodes_from(nodes)
     G2_rev = G2.reverse()
 
@@ -294,30 +315,3 @@ def _flip_edge_weights(G: nx.Graph, copy: bool = False) -> nx.Graph:
 
     if copy:
         return graph_to_modify
-
-# --- Example Usage ---
-if __name__ == "__main__":
-    G1 = nx.DiGraph()
-    G1.add_nodes_from([0,1,2])
-    G1.add_edges_from([(0,1)])
-    G2 = nx.DiGraph()
-    G2.add_nodes_from([0,1,2])
-    G2.add_edges_from([(1,2)])
-
-    import matplotlib.pyplot as plt
-
-    res = ff_commutator(G2,G1)
-    res_arr = cast_data_to_array(res)
-
-    print(res_arr)
-
-    arr1 = cast_data_to_array(G1)
-    arr2 = cast_data_to_array(G2)
-    print(ff_commutator(arr2, arr1))
-
-    nx.draw(G1, with_labels = True)
-    plt.show()
-    nx.draw(G2, with_labels = True)
-    plt.show()
-    nx.draw(res, with_labels = True)
-    plt.show()
