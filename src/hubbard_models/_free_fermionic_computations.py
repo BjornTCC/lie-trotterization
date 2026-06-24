@@ -28,7 +28,7 @@ def spectral_norm_of_free_fermionic_operator(
 
 @singledispatch
 def ff_commutator(op1: T, op2: T) -> T:
-    raise TypeError(f"Unsupported type: {type(data)}")
+    raise TypeError(f"Unsupported type: {type(op1)}")
 
 @singledispatch
 def cast_data_to_array(data: T) -> np.ndarray:
