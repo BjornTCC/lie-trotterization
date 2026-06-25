@@ -80,7 +80,6 @@ def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: floa
 
     bnds = [(0,tm)]# These bounds ensure Npe > 0
 
-
     min_res = minimize(opt_func, x0=t0, bounds = bnds)
 
     Npe = min_res.fun
