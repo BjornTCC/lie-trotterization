@@ -44,6 +44,18 @@ class SpinSymmetricMixedControlledKappa(ResourceGate):
         return 2
 
     @property
+    def h(self) -> int:
+        return 4 * 2
+
+    @property
+    def s(self) -> int:
+        return 4 * 1
+
+    @property
+    def sdg(self) -> int:
+        return 4 * 1
+
+    @property
     def ry(self) -> int:
         return 2
 
@@ -76,6 +88,18 @@ class SpinSymmetricMixedControlledHappa(ResourceGate):
     @property
     def x(self) -> int:
         return 2
+
+    @property
+    def h(self) -> int:
+        return 4 * 2
+
+    @property
+    def s(self) -> int:
+        return 4 * 1
+
+    @property
+    def sdg(self) -> int:
+        return 4 * 1
 
     @property
     def ry(self) -> int:

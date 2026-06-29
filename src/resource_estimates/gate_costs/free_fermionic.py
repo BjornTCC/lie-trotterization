@@ -52,6 +52,8 @@ class Fij(ResourceGate):
     def cx(self) -> int:
         return 3
 
+fgate = Fij()
+
 class FreeFermionicS1Tile(ResourceGate):
 
     @property
@@ -74,107 +76,107 @@ class FreeFermionicS2Tile(ResourceGate):
 
     @property
     def rz(self) -> int:
-        return 2
+        return 2 + 2*fgate.rz
 
     @property
     def t(self) -> int:
-        return 2
-
+        return 2*fgate.t
 
     @property
     def tdg(self) -> int:
-        return 2
+        return 2*fgate.tdg
 
     @property
     def h(self) -> int:
-        return 8 + 2*6
+        return 8 + 2*fgate.h
 
     @property
     def s(self) -> int:
-        return 6 + 2*3
+        return 6 + 2*fgate.s
 
     @property
     def cx(self) -> int:
-        return 2 + 2*3
+        return 2 + 2*fgate.cx
 
     class FreeFermionicS3Tile(ResourceGate):
 
         @property
         def rz(self) -> int:
-            return 2 + 2*2
+            return 2 + 2 * fgate.t + 2*fgate.tdg + 2*fgate.rz
 
         @property
         def t(self) -> int:
-            return 2
+            return 4 * fgate.t
 
         @property
         def tdg(self) -> int:
-            return 2
+            return 4 * fgate.tdg
 
         @property
         def h(self) -> int:
-            return 8 + 4 * 6
+            return 8 + 4 * fgate.h
 
         @property
         def s(self) -> int:
-            return 6 + 4 * 3
+            return 6 + 4 * fgate.s
 
         @property
         def cx(self) -> int:
-            return 2 + 4 * 3
+            return 2 + 4 * fgate.cx
 
-    class FreeFermionicS4Tile(ResourceGate):
 
-        @property
-        def rz(self) -> int:
-            return 2
+class FreeFermionicS4Tile(ResourceGate):
 
-        @property
-        def t(self) -> int:
-            return 1*6
+    @property
+    def rz(self) -> int:
+        return 2 + 6 * fgate.rz
 
-        @property
-        def tdg(self) -> int:
-            return 1*6
+    @property
+    def t(self) -> int:
+        return 6 * fgate.t
 
-        @property
-        def h(self) -> int:
-            return 8 + 6 * 6
+    @property
+    def tdg(self) -> int:
+        return 6 * fgate.tdg
 
-        @property
-        def s(self) -> int:
-            return 6 + 6 * 3
+    @property
+    def h(self) -> int:
+        return 8 + 6 * fgate.h
 
-        @property
-        def cx(self) -> int:
-            return 2 + 6 * 3
+    @property
+    def s(self) -> int:
+        return 6 + 6 * fgate.s
 
-        @property
-        def fswap(self) -> int:
-            return 2
+    @property
+    def cx(self) -> int:
+        return 2 + 6 * fgate.cx
+
+    @property
+    def fswap(self) -> int:
+        return 2
 
     class FreeFermionicC4Tile(ResourceGate):
 
         @property
         def rz(self) -> int:
-            return 2
+            return 2 + 4 * fgate.rz
 
         @property
         def t(self) -> int:
-            return 4*1
+            return 4 * fgate.t
 
         @property
         def tdg(self) -> int:
-            return 4*1
+            return 4 * fgate.tdg
 
         @property
         def h(self) -> int:
-            return 8 + 4 * 6
+            return 8 + 4 * fgate.h
 
         @property
         def s(self) -> int:
-            return 6 + 4 * 3
+            return 6 + 4 * fgate.s
 
         @property
         def cx(self) -> int:
-            return 2 + 4 * 3
+            return 2 + 4 * fgate.cx
