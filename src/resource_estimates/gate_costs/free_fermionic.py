@@ -1,6 +1,6 @@
 from src.resource_estimates.gate_costs.protocol import ResourceGate
 
-class SingleExcitation(ResourceGate):
+class Kappa(ResourceGate):
 
     @property
     def ry(self) -> int:
@@ -10,7 +10,7 @@ class SingleExcitation(ResourceGate):
     def cx(self) -> int:
         return 4
 
-class SingleHermitianExcitation(ResourceGate):
+class Happa(ResourceGate):
 
     @property
     def rz(self) -> int:
