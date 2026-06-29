@@ -17,6 +17,11 @@ from openfermion.ops import FermionOperator
 from hamiltonians.primitives import hubbard_from_nx
 
 from src.hubbard_models._free_fermionic_computations import spectral_norm_of_free_fermionic_operator, ff_commutator, cast_data_to_array
+from src.hubbard_models.split_operator_error_coefficients import (
+    second_order_split_operator_error_coefficient,
+    fourth_order_suzuki_trotter_split_operator_error_coefficient,
+    fourth_order_augmented_split_operator_error_coefficients
+)
 
 from scipy.optimize import fsolve, minimize
 
@@ -26,12 +31,12 @@ def get_fermionic_operator(U: float, tau: float, L: int) -> FermionOperator:
 
 def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, L: int, type: str) -> int:
     if type == "plaquette":
-        W = _second_order_error_coefficient(U, tau, L)
+        W = second_order_error_coefficient(U, tau, L)
         return math.ceil(
             np.sqrt(W / eps) * t**(3/2)
         )
     elif type == "plaquette suzuki-trotter":
-        W = _fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L)
+        W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L**2,4)
         return math.ceil(
             (W / eps)**(1/4) * t**(5/4)
         )
@@ -41,25 +46,25 @@ def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, 
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
-def compute_number_of_simulation_circuits_and_evolution_time_for_qpe(eps: float, U: float, tau: float, L: int, type: str) -> tuple[int,int]:
+def compute_number_of_simulation_circuits_and_evolution_time_for_qpe(eps: float, U: float, tau: float, L: int, type: str, unitary_decomp: bool = True) -> tuple[int,int]:
     if type == "plaquette":
-        W = _second_order_error_coefficient(U, tau, L)
+        W = second_order_error_coefficient(U, tau, L)
         return  math.ceil(
             6.203 * W**(1/2) / (eps**(3/2))
         ), np.sqrt(eps / (3*W))
     elif type == "plaquette suzuki-trotter":
-        W = _fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L)
+        W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L**2, 4)
         return math.ceil(
             4.463 * W ** (1 / 4) /(eps ** (5 / 4))
         ), (eps / (5*W))**(1/4)
         #return _plaquette_suzuki_trotter_num_simulation_circuits(eps,U,tau, L)
     elif type == "augmented plaquette":
-        return _augmented_plaquette_num_simulation_circuits(eps, U, tau, L)
+        return _augmented_plaquette_num_simulation_circuits(eps, U, tau, L, unitary_decomp=unitary_decomp)
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
 def _augmented_plaquette_trotter_steps(t: float, eps: float, U: float, tau: float, L: int) -> int:
-    W5, W6, W7 = _fourth_order_augmented_split_operator_error_coefficients(U, tau, L)
+    W5, W6, W7 = fourth_order_augmented_split_operator_error_coefficients(U, tau, L**2, 4)
 
     f = lambda n: W5 * t**5 / n**4 + W6 * t**6 / n**6 + W7 * t**7 / n**6 + n * _augmented_free_fermionic_formula_error(t/n, U, tau, L) - eps
 
@@ -69,16 +74,16 @@ def _augmented_plaquette_trotter_steps(t: float, eps: float, U: float, tau: floa
 
     return math.ceil(root)
 
-def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: float, L: int) -> int:
-    W5, W6, W7 = _fourth_order_augmented_split_operator_error_coefficients(U, tau, L)
+def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: float, L: int, unitary_decomp: bool = True) -> int:
+    W5, W6, W7 = fourth_order_augmented_split_operator_error_coefficients(U, tau, L**2, 4, unitary_decomp=unitary_decomp)
 
     f = lambda t: W5 * t**5 + W6 * t**6 + W7 * t**7 + _augmented_free_fermionic_formula_error(t, U, tau, L)
-    opt_func = lambda t: 0.76*np.pi/(t*(eps - f(t)))
+    opt_func = lambda t: 0.76*np.pi/(t*eps - f(t))
 
     t0 = (eps / (5*W5))**(1/4)
     tm = (eps / W5)**(1/4)
 
-    bnds = [(0,tm)]# These bounds ensure Npe > 0
+    bnds = [(0.00001,tm)]# These bounds ensure Npe > 0
 
     min_res = minimize(opt_func, x0=t0, bounds = bnds)
 
@@ -114,6 +119,16 @@ def _augmented_free_fermionic_formula_error(t: float, U: float, tau: float, L: i
         comp_mat - exact_mat
     )
 
+def second_order_error_coefficient(U: float, tau: float, L: int) -> float:
+    G_red, G_blue, G = plaquette_decomposition_graphs(L)
+    WSO = second_order_split_operator_error_coefficient(U, tau, L**2, G)
+
+    commutator_graph = ff_commutator(
+        G_red, ff_commutator(G_blue, G_red)
+    )
+
+    return WSO + tau**2 * 3 / 24 * spectral_norm_of_free_fermionic_operator(commutator_graph)
+
 def plaquette_decomposition_graphs(L: int) -> tuple[nx.Graph, nx.Graph, nx.Graph]:
     assert not (L % 2)
     red, blue = nx.Graph(), nx.Graph()
@@ -143,50 +158,3 @@ def plaquette_decomposition_graphs(L: int) -> tuple[nx.Graph, nx.Graph, nx.Graph
                 ])
 
     return red, blue, whole
-
-def _second_order_error_coefficient(U: float, tau: float, L: int) -> float:
-    G_red, G_blue, G = plaquette_decomposition_graphs(L)
-    Hh = tau * spectral_norm_of_free_fermionic_operator(G)
-    WSO = min(
-        (U**2 / 12) * Hh + (U * tau**2 / 12) * L**2 * (np.sqrt(5) + 8),
-        (U * tau**2 / 6) * L**2 * (np.sqrt(5) + 8) + (U**2 / 24) * Hh
-    )
-
-    commutator_graph = ff_commutator(
-        G_red, ff_commutator(G_blue, G_red)
-    )
-
-    return WSO + tau**2 * 3 / 24 * spectral_norm_of_free_fermionic_operator(commutator_graph)
-
-def _fourth_order_suzuki_trotter_split_operator_error_coefficient(U: float, tau: float, L: int) -> float:
-    return 4*tau*U*L**2*min(
-        0.9088*U**3 + 15.1296*4*tau*U**2 + 5.6256*4**2*tau**2*U + 1.2032 * 4**3*tau**3,
-        0.1504*U**3 + 9.0624*4*tau*U**2 + 5.5168*4**2*tau**2*U + 7.274 * 4**3*tau**3
-    )
-
-def _fourth_order_augmented_split_operator_error_coefficients(U: float, tau: float, L: int) -> tuple[float, float, float]:
-    Wso = (4 / 15 * U**3 + 25877 / 2880 * 4*tau*U**2 + 36 / 5 * 4**2 * tau**2 * U + 8 / 5 * 4**3 * tau**3) * 4*tau*U*L**2
-    WH2H1 = (5 / 9 * (4**2 + 4) * tau + 2 / 3 * 4**3 * tau + (5*4 + 1) / 36 * U)*4*tau**2*U**2*L**2
-    WH2H2H1 = 1 / 72 * 4**2 * tau**2 * U**4 * L**2
-    WSO7 = (1 / 7 * U + 832 / 63 * 4 * tau) * 4**2*tau**2 * U**4 * L**2
-    return Wso + WH2H1, WH2H2H1, WSO7
-
-def _resource_optimizer(f: callable, interval: tuple[float, float], num_grid_points: int = 100) -> any:
-    delta = (interval[1] - interval[0]) / num_grid_points
-    grid_points = np.linspace(interval[0] + delta / 2, interval[1] - delta / 2, num_grid_points)
-
-    vals = [f(x) for x in grid_points]
-
-    pos_vals = [(v if v > 0 else np.inf) for v in vals ]
-
-    if len(pos_vals) == 0:
-        return False
-
-    x0 = grid_points[np.argmin(pos_vals)]
-
-    opt_res = fsolve(f, x0, full_output = True)
-
-    if opt_res.ier != 1:
-        return False
-
-    return opt_res[0][0]
