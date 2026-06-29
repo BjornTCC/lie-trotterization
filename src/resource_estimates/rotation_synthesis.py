@@ -8,7 +8,7 @@ import numpy as np
 
 from pygridsynth.gridsynth import gridsynth_gates
 
-def gridsynth_rotation_cost(theta: float | list[float], eps: float,  max_samples: int = 100) -> int:
+def gridsynth_rotation_cost(theta: float | list[float], eps: float,  max_samples: int = 100) -> tuple[int,int]:
     if isinstance(theta, float):
         gates = gridsynth_gates(theta=mpmath.mpf(theta), epsilon=mpmath.mpf(eps))
         return gates.count("T")
@@ -16,17 +16,17 @@ def gridsynth_rotation_cost(theta: float | list[float], eps: float,  max_samples
         res = 0
         for t in theta:
             res += gridsynth_rotation_cost(t, eps / len(theta))
-        return res
+        return res, 0
     else:
         res = 0
         angles = np.random.choice(theta, size = max_samples, replace = False)
         for t in angles:
             res += gridsynth_rotation_cost(t, eps / len(theta))
-        return math.ceil(res * len(theta) / max_samples)
+        return math.ceil(res * len(theta) / max_samples), 0
 
-def rus_rotation_cost(theta: float | list[float], eps: float) -> int:
+def rus_rotation_cost(theta: float | list[float], eps: float) -> tuple[int,int]:
     if isinstance(theta, float):
         nr = 1
     else:
         nr = len(theta)
-    return math.ceil(nr * (1.149 * np.log2(nr / eps) + 9.2))
+    return math.ceil(nr * (1.149 * np.log2(nr / eps) + 9.2)), math.ceil(2 * nr*np.log(nr/eps) / np.log(5))

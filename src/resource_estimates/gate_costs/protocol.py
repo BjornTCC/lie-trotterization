@@ -3,6 +3,14 @@ from abc import ABC
 
 from qiskit import QuantumCircuit, QuantumRegister
 
+gate_labels = [
+    "rz", "ry", "rx",
+    "t", "tdg", "toffoli",
+    "s", "sdg", "h",
+    "cx", "fswap",
+    "x", "y", "z"
+]
+
 class ResourceGate(ABC):
 
     @property
@@ -50,7 +58,7 @@ class ResourceGate(ABC):
         return 0
 
     @property
-    def sdag(self) -> int:
+    def sdg(self) -> int:
         return 0
 
     @property
@@ -77,11 +85,4 @@ class ResourceGate(ABC):
         raise NotImplementedError(f"Qiskit circuit for ResourceGate {self} not implemented")
 
     def gate_costs_as_dict(self) -> dict[str: int]:
-        labels = [
-            "rz", "ry", "rx",
-            "t", "tdg", "toffoli",
-            "s", "sdg", "h",
-            "cx", "fswap",
-            "x","y","z"
-        ]
-        return {x: getattr(self, x) for x in labels if getattr(self, x) > 0}
+        return {x: getattr(self, x) for x in gate_labels if getattr(self, x) > 0}
