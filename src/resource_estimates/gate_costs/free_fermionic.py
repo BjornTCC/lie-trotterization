@@ -24,6 +24,12 @@ class SingleHermitianExcitation(ResourceGate):
     def cx(self) -> int:
         return 4
 
+class Occupation(ResourceGate):
+
+    @property
+    def rz(self) -> int:
+        return 1
+
 class Fij(ResourceGate):
 
     @property
