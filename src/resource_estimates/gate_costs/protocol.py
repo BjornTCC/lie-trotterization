@@ -6,11 +6,19 @@ from qiskit import QuantumCircuit, QuantumRegister
 class ResourceGate(ABC):
 
     @property
-    def ancilla_qubits(self) -> int | None:
+    def ancilla_qubits(self) -> int:
         return 0
 
     @property
-    def rotations(self) -> int | None:
+    def rz(self) -> int:
+        return 0
+
+    @property
+    def ry(self) -> int:
+        return 0
+
+    @property
+    def rx(self) -> int:
         return 0
 
     @property
@@ -26,27 +34,31 @@ class ResourceGate(ABC):
         return 0
 
     @property
-    def cx(self) -> int | None:
+    def cx(self) -> int:
         return 0
 
     @property
-    def h(self) -> int | None:
+    def fswap(self) -> int:
         return 0
 
     @property
-    def s(self) -> int | None:
+    def h(self) -> int:
         return 0
 
     @property
-    def sdag(self) -> int | None:
+    def s(self) -> int:
         return 0
 
     @property
-    def x(self) -> int | None:
+    def sdag(self) -> int:
         return 0
 
     @property
-    def y(self) -> int | None:
+    def x(self) -> int:
+        return 0
+
+    @property
+    def y(self) -> int:
         return 0
 
     @property
@@ -57,5 +69,19 @@ class ResourceGate(ABC):
     def cliffords(self) -> int:
         return self.cx + self.s + self.sdg + self.h + self.x + self.y + self.z
 
+    @property
+    def arbitrary_rotations(self) -> int:
+        return self.rx + self.ry + self.rz
+
     def to_qiskit_circuit(self, register: QuantumRegister, qubits: list, parameters: list) -> QuantumCircuit:
         raise NotImplementedError(f"Qiskit circuit for ResourceGate {self} not implemented")
+
+    def gate_costs_as_dict(self) -> dict[str: int]:
+        labels = [
+            "rz", "ry", "rx",
+            "t", "tdg", "toffoli",
+            "s", "sdg", "h",
+            "cx", "fswap",
+            "x","y","z"
+        ]
+        return {x: getattr(self, x) for x in labels if getattr(self, x) > 0}
