@@ -10,7 +10,7 @@ from src.resource_estimates.rotation_synthesis import synthesize_resource_dict_r
 def adaptive_phase_estimation_resources(
         target_error: float,
         gates_per_trotter_step: dict[ResourceGate: int],
-        unitary_Gates: dict[ResourceGate: int] = {},
+        unitary_gates: dict[ResourceGate: int] = {},
         num_simulation_steps: int | None = None,
         simulation_steps_and_time_from_error: callable = None,
         unitary_error_coefficients: dict[int: float] = None,
@@ -20,7 +20,7 @@ def adaptive_phase_estimation_resources(
     """
     :param target_error: Desired error in the computed energy
     :param gates_per_trotter_step: ResourceGate counts for each trotter step
-    :param unitary_Gates: Outer unitary gates in the simulation circuit
+    :param unitary_gates: Outer unitary gates in the simulation circuit
     :param num_simulation_steps: Number of calls to the simulation circuits
     :param simulation_steps_and_time_from_error: A function that takes target simulation error and returns a tuple of (evolution time (float), simulation steps (int))
     :param unitary_error_coefficients: Dictionary of error coefficients in the error of the simulation circuit, keys being the power of time, values being coeffiecients.
@@ -43,7 +43,7 @@ def adaptive_phase_estimation_resources(
 
     unitary_applications = math.ceil(np.log2(Npe))
 
-    for nlayers, gate_bundle in zip([unitary_applications, Npe], [unitary_Gates, gates_per_trotter_step]):
+    for nlayers, gate_bundle in zip([unitary_applications, Npe], [unitary_gates, gates_per_trotter_step]):
         for gate, count in gate_bundle.items():
             for g in gate_labels:
                 if g in res.keys():
@@ -59,7 +59,7 @@ def adaptive_phase_estimation_resources(
 def quantum_phase_estimation_resources(
         target_error: float,
         gates_per_trotter_step: dict[ResourceGate: int],
-        unitary_Gates: dict[ResourceGate: int] = {},
+        unitary_gates: dict[ResourceGate: int] = {},
         num_simulation_steps: int | None = None,
         simulation_steps_and_time_from_error: callable = None,
         unitary_error_coefficients: dict[int: float] = None,
@@ -69,7 +69,7 @@ def quantum_phase_estimation_resources(
     """
         :param target_error: Desired error in the computed energy
         :param gates_per_trotter_step: ResourceGate counts for each trotter step
-        :param unitary_Gates: Outer unitary gates in the simulation circuit
+        :param unitary_gates: Outer unitary gates in the simulation circuit
         :param num_simulation_steps: Number of calls to the simulation circuits
         :param simulation_steps_and_time_from_error: A function that takes target simulation error and returns a tuple of (evolution time (float), simulation steps (int))
         :param unitary_error_coefficients: Dictionary of error coefficients in the error of the simulation circuit, keys being the power of time, values being coeffiecients.
@@ -94,7 +94,7 @@ def quantum_phase_estimation_resources(
 
     unitary_applications = 1
 
-    for nlayers, gate_bundle in zip([unitary_applications, Npe], [unitary_Gates, gates_per_trotter_step]):
+    for nlayers, gate_bundle in zip([unitary_applications, Npe], [unitary_gates, gates_per_trotter_step]):
         for gate, count in gate_bundle.items():
             for g in gate_labels:
                 if g in res.keys():

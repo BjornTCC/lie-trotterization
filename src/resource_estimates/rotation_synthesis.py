@@ -46,7 +46,9 @@ def synthesize_resource_dict_rotations(
         case "gridsynth":
             t_cost, cx_cost = gridsynth_rotation_cost(np.random.uniform(size=nr), target_error)
         case "RUS":
-            t_cost, cx_cost = rus_rotation_cost([0.0] * nr, target_error)
+            t_cost, cx_cost = rus_rotation_cost([0.0], target_error/nr)
+            t_cost *= nr
+            cx_cost *= nr
         case _:
             raise ValueError(f"Rotation synthesis method: {synthesis_strategy} not recognized/implemented.")
 

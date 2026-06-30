@@ -61,7 +61,7 @@ def _compute_time_step_and_num_trotter_steps(
     if num_trotter_steps is not None:
         n = num_trotter_steps
     elif trotter_steps_from_time_and_error is not None:
-        n = trotter_steps_from_time_and_error(t, target_error)
+        n = trotter_steps_from_time_and_error(time, target_error)
     elif error_coefficients is not None:
         def f(n) -> float:
             res = 0
