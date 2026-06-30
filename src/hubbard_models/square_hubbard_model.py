@@ -46,17 +46,17 @@ def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, 
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
-def compute_number_of_simulation_circuits_and_evolution_time_for_qpe(eps: float, U: float, tau: float, L: int, type: str, unitary_decomp: bool = True) -> tuple[int,float]:
+def compute_evolution_time_and_number_of_simulation_circuits_for_qpe(eps: float, U: float, tau: float, L: int, type: str, unitary_decomp: bool = True) -> tuple[float,int]:
     if type == "plaquette":
         W = second_order_error_coefficient(U, tau, L)
-        return  math.ceil(
+        return np.sqrt(eps / (3*W)), math.ceil(
             6.203 * W**(1/2) / (eps**(3/2))
-        ), np.sqrt(eps / (3*W))
+        )
     elif type == "plaquette suzuki-trotter":
         W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L**2, 4)
-        return math.ceil(
+        return (eps / (5*W))**(1/4), math.ceil(
             4.463 * W ** (1 / 4) /(eps ** (5 / 4))
-        ), (eps / (5*W))**(1/4)
+        )
         #return _plaquette_suzuki_trotter_num_simulation_circuits(eps,U,tau, L)
     elif type == "augmented plaquette":
         return _augmented_plaquette_num_simulation_circuits(eps, U, tau, L, unitary_decomp=unitary_decomp)
@@ -74,7 +74,7 @@ def _augmented_plaquette_trotter_steps(t: float, eps: float, U: float, tau: floa
 
     return math.ceil(root)
 
-def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: float, L: int, unitary_decomp: bool = True) -> int:
+def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: float, L: int, unitary_decomp: bool = True) -> tuple[float, int]:
     W5, W6, W7 = fourth_order_augmented_split_operator_error_coefficients(U, tau, L**2, 4, unitary_decomp=unitary_decomp)
 
     f = lambda t: W5 * t**5 + W6 * t**6 + W7 * t**7 + _augmented_free_fermionic_formula_error(t, U, tau, L)
@@ -89,7 +89,7 @@ def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: floa
 
     Npe = min_res.fun
 
-    return math.ceil(Npe), min_res.x[0]
+    return  min_res.x[0], math.ceil(Npe)
 
 
 def _plaquette_suzuki_trotter_steps(t: float, eps: float, U: float, tau: float, L: int) -> int:

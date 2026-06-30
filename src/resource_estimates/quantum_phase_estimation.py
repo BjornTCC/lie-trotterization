@@ -17,6 +17,17 @@ def adaptive_phase_estimation_resources(
         x: float | None = None,
         synthesize_rotation_with: str = "RUS"
 ) -> dict[str: int]:
+    """
+    :param target_error: Desired error in the computed energy
+    :param gates_per_trotter_step: ResourceGate counts for each trotter step
+    :param unitary_Gates: Outer unitary gates in the simulation circuit
+    :param num_simulation_steps: Number of calls to the simulation circuits
+    :param simulation_steps_and_time_from_error: A function that takes target simulation error and returns a tuple of (evolution time (float), simulation steps (int))
+    :param unitary_error_coefficients: Dictionary of error coefficients in the error of the simulation circuit, keys being the power of time, values being coeffiecients.
+    :param x: Proportion of error allocated to rotation synthesis. If None, then gate counts are returned in Clifford + T + Tdag + r
+    :param synthesize_rotation_with: Strategy to synthesize rotation gates
+    :return: dict[str: int] gate counts in {clifford + T + Tdg} or {clifford + T + Tdg + Rx + Ry + Rz} if x is None
+    """
     measurement_ancillae = 1
     bit_precision_constant = 0.76*math.pi
     if x is None:
@@ -55,6 +66,17 @@ def quantum_phase_estimation_resources(
         x: float | None = None,
         synthesize_rotation_with: str = "RUS"
 ) -> dict[str: int]:
+    """
+        :param target_error: Desired error in the computed energy
+        :param gates_per_trotter_step: ResourceGate counts for each trotter step
+        :param unitary_Gates: Outer unitary gates in the simulation circuit
+        :param num_simulation_steps: Number of calls to the simulation circuits
+        :param simulation_steps_and_time_from_error: A function that takes target simulation error and returns a tuple of (evolution time (float), simulation steps (int))
+        :param unitary_error_coefficients: Dictionary of error coefficients in the error of the simulation circuit, keys being the power of time, values being coeffiecients.
+        :param x: Proportion of error allocated to rotation synthesis. If None, then gate counts are returned in Clifford + T + Tdag + r
+        :param synthesize_rotation_with: Strategy to synthesize rotation gates
+        :return: dict[str: int] gate counts in {clifford + T + Tdg} or {clifford + T + Tdg + Rx + Ry + Rz} if x is None
+        """
     bit_precision_constant = 0.5*math.pi
     if x is None:
         simulation_error = target_error
