@@ -55,7 +55,35 @@ def quantum_phase_estimation_resources(
         x: float | None = None,
         synthesize_rotation_with: str = "RUS"
 ) -> dict[str: int]:
-    measurement_ancillae = math.ceil(np.log2())
+    bit_precision_constant = 0.5*math.pi
+    if x is None:
+        simulation_error = target_error
+    else:
+        simulation_error = target_error*(1-x)
+        rotation_error = target_error*x
+
+    t, Npe = _simulation_time_and_number_of_calls(bit_precision_constant, simulation_error, num_simulation_steps, simulation_steps_and_time_from_error, unitary_error_coefficients)
+    measurement_ancillae = math.ceil(np.log2(math.pi / (np.sqrt(2)*simulation_error*t)))
+    res = {
+        "ancilla_qubits": measurement_ancillae,
+        "h": measurement_ancillae - 1,
+        "rz": measurement_ancillae - 1,
+    }
+
+    unitary_applications = 1
+
+    for nlayers, gate_bundle in zip([unitary_applications, Npe], [unitary_Gates, gates_per_trotter_step]):
+        for gate, count in gate_bundle.items():
+            for g in gate_labels:
+                if g in res.keys():
+                    res[g] += nlayers * count * getattr(gate, g)
+                else:
+                    res[g] = nlayers * count * getattr(gate, g)
+
+    if x is None:
+        return {x: y for x, y in res.items() if y != 0}
+
+    return synthesize_resource_dict_rotations(res, rotation_error, synthesize_rotation_with)
 
 def _simulation_time_and_number_of_calls(
     bit_precision_constant: float,
@@ -77,7 +105,11 @@ def _simulation_time_and_number_of_calls(
 
         min_power = min(unitary_error_coefficients)
         t0 = (target_error / (min_power * unitary_error_coefficients[min_power]))**(1/(min_power - 1))
-        res = minimize(f, t0)
+
+        tm = (target_error / unitary_error_coefficients[min_power]) ** (1 / (min_power - 1))
+
+        bnds = [(0.00001, tm)]  # These bounds ensure Npe > 0
+        res = minimize(f, t0, bounds = bnds)
         if not res.success:
             warnings.warn(
                 f"minimize failed to converge with msg:\n{res.message}"

@@ -46,7 +46,7 @@ def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, 
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
-def compute_number_of_simulation_circuits_and_evolution_time_for_qpe(eps: float, U: float, tau: float, L: int, type: str, unitary_decomp: bool = True) -> tuple[int,int]:
+def compute_number_of_simulation_circuits_and_evolution_time_for_qpe(eps: float, U: float, tau: float, L: int, type: str, unitary_decomp: bool = True) -> tuple[int,float]:
     if type == "plaquette":
         W = second_order_error_coefficient(U, tau, L)
         return  math.ceil(
