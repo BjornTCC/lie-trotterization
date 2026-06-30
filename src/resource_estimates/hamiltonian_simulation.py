@@ -4,7 +4,7 @@ import warnings
 from scipy.optimize import fsolve
 
 from src.resource_estimates.gate_costs.protocol import ResourceGate, gate_labels
-from src.resource_estimates.rotation_synthesis import gridsynth_rotation_cost, rus_rotation_cost
+from src.resource_estimates.rotation_synthesis import synthesize_resource_dict_rotations
 
 def hamiltonian_simulation_cost(
         time: float,
@@ -48,30 +48,8 @@ def hamiltonian_simulation_cost(
     if x is None:
         return {x: y for x, y in res.items() if y!= 0}
 
-    nr = sum([res["rz"], res["rx"], res["ry"]])
-    warnings.warn("When synthesizing rotation into clifford plus T, this function does not compute the single-qubit clifford count due to arbitrary rotations.")
     rotation_error = x * target_error
-    match synthesize_rotation_with:
-        case "gridsynth":
-            t_cost, cx_cost = gridsynth_rotation_cost(np.random.uniform(size = nr), rotation_error)
-        case "RUS":
-            t_cost, cx_cost = rus_rotation_cost([0.0]*nr, rotation_error)
-        case _:
-            raise ValueError(f"Rotation synthesis method: {synthesize_rotation_with} not recognized/implemented.")
-
-    del res["rx"]
-    del res["ry"]
-    del res["rz"]
-
-    if "t" in res.keys():
-        res["t"] += t_cost
-    else:
-        res["t"] = t_cost
-    if "cx" in res.keys():
-        res["cx"] += cx_cost
-    else:
-        res["cx"] = cx_cost
-    return {x: y for x, y in res.items() if y!= 0}
+    return synthesize_resource_dict_rotations(res, rotation_error, synthesize_rotation_with)
 
 def _compute_time_step_and_num_trotter_steps(
         time: float,
