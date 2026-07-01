@@ -13,65 +13,70 @@ gate_labels = [
 
 class ResourceGate(ABC):
 
+    def __init__(self) -> None:
+        self._ancilla_qubits = 0
+        for gate in gate_labels:
+            setattr(self, "_" + gate, 0)
+
     @property
     def ancilla_qubits(self) -> int:
-        return 0
+        return self._ancilla_qubits
 
     @property
     def rz(self) -> int:
-        return 0
+        return self._rz
 
     @property
     def ry(self) -> int:
-        return 0
+        return self._ry
 
     @property
     def rx(self) -> int:
-        return 0
+        return self._rx
 
     @property
     def t(self) -> int:
-        return 0
+        return self._t
 
     @property
     def tdg(self) -> int:
-        return 0
+        return self._tdg
 
     @property
     def toffoli(self) -> int:
-        return 0
+        return self._toffoli
 
     @property
     def cx(self) -> int:
-        return 0
+        return self._cx
 
     @property
     def fswap(self) -> int:
-        return 0
+        return self._fswap
 
     @property
     def h(self) -> int:
-        return 0
+        return self._h
 
     @property
     def s(self) -> int:
-        return 0
+        return self._s
 
     @property
     def sdg(self) -> int:
-        return 0
+        return self._sdg
 
     @property
     def x(self) -> int:
-        return 0
+        return self._x
 
     @property
     def y(self) -> int:
-        return 0
+        return self._y
 
     @property
     def z(self) -> int:
-        return 0
+        return self._z
 
     @property
     def cliffords(self) -> int:
