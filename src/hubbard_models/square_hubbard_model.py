@@ -98,16 +98,6 @@ def _plaquette_suzuki_trotter_steps(t: float, eps: float, U: float, tau: float, 
 def _plaquette_suzuki_trotter_num_simulation_circuits(eps: float, U: float, tau: float, L: int) -> int:
     ...
 
-def _augmented_free_fermionic_formula_error_upperbound(t: float, U: float, tau: float, L: int) -> float:
-    Gr, Gb, G = plaquette_decomposition_graphs(L)
-
-    correction = ff_commutator(
-        Gr, ff_commutator(Gb, Gr)
-    )
-    return 2*spectral_norm_of_free_fermionic_operator(
-        comp_mat - exact_mat
-    )
-
 def _augmented_free_fermionic_formula_error(t: float, U: float, tau: float, L: int) -> float:
     Gr, Gb, G = plaquette_decomposition_graphs(L)
 
