@@ -8,6 +8,8 @@ In all calculations we assume a periodic lattice
 """
 
 import math
+import warnings
+
 import numpy as np
 import scipy as sp
 import networkx as nx
@@ -23,7 +25,7 @@ from src.hubbard_models.split_operator_error_coefficients import (
     fourth_order_augmented_split_operator_error_coefficients
 )
 
-from scipy.optimize import fsolve, minimize
+from scipy.optimize import fsolve, minimize_scalar
 
 def get_fermionic_operator(U: float, tau: float, L: int) -> FermionOperator:
     graph = nx.convert_node_labels_to_integers(nx.grid_2d_graph(L,L, periodic = True))
@@ -85,11 +87,14 @@ def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: floa
 
     bnds = [(0.00001,tm)]# These bounds ensure Npe > 0
 
-    min_res = minimize(opt_func, x0=t0, bounds = bnds)
+    min_res = minimize_scalar(opt_func, bounds = bnds[0])
+
+    if not min_res.success:
+        warnings.warn(f"Npe optimizer failed with message: {min_res.message}")
 
     Npe = min_res.fun
 
-    return  min_res.x[0], math.ceil(Npe)
+    return  min_res.x, math.ceil(Npe)
 
 
 def _plaquette_suzuki_trotter_steps(t: float, eps: float, U: float, tau: float, L: int) -> int:
@@ -98,17 +103,28 @@ def _plaquette_suzuki_trotter_steps(t: float, eps: float, U: float, tau: float, 
 def _plaquette_suzuki_trotter_num_simulation_circuits(eps: float, U: float, tau: float, L: int) -> int:
     ...
 
+def _augmented_free_fermionic_formula_error_coefficients(t: float, U: float, tau: float, L: int) -> float:
+    Gr, Gb, G = plaquette_decomposition_graphs(L)
+
+    ...
+
+    return W5, W6, W7
+
+
 def _augmented_free_fermionic_formula_error(t: float, U: float, tau: float, L: int) -> float:
     Gr, Gb, G = plaquette_decomposition_graphs(L)
 
     correction = ff_commutator(
         Gr, ff_commutator(Gb, Gr)
     )
+    correction2 = ff_commutator(
+        Gb, ff_commutator(Gb, Gr)
+    )
     Gb_arr = cast_data_to_array(Gb)
-
-    Mat_Gr = (t * tau/2 - t**3 * tau**3 / 12) * cast_data_to_array(Gr)
+    Gr_arr = cast_data_to_array(Gr)
+    Mat_Gr = (t * tau/2 - t**3 * tau**3 / 12) * Gr_arr
     Mat_Gb = (t * tau/2 + t**3 * tau**3 / 24) * Gb_arr
-    Mat_Cr = t**3 * tau**3 * (cast_data_to_array(correction) + 2*Gb_arr) / 24
+    Mat_Cr = -t**3 * tau**3 * (cast_data_to_array(correction) + 2*cast_data_to_array(correction2) + 2*Gb_arr- 4*Gr_arr) / 24
     Mat_G = t * tau * cast_data_to_array(G)
 
     comp_mat = sp.linalg.expm(Mat_Gr) @ sp.linalg.expm(Mat_Gb) @ sp.linalg.expm(Mat_Cr) @ sp.linalg.expm(Mat_Gb) @ sp.linalg.expm(Mat_Gr)
