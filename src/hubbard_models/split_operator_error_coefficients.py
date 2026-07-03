@@ -4,7 +4,7 @@ import numpy as np
 from src.hubbard_models._free_fermionic_computations import spectral_norm_of_free_fermionic_operator
 
 def second_order_split_operator_error_coefficient(U: float, tau: float, N: int, hopping_graph: nx.Graph) -> float:
-    Hh = 2*tau * spectral_norm_of_free_fermionic_operator(hopping_graph)
+    Hh = 2*tau * 2*spectral_norm_of_free_fermionic_operator(hopping_graph)
     return min(
         (U**2 / 12) * Hh + (U * 4*tau**2 / 12) * N * (np.sqrt(5) + 8),
         (U * 4*tau**2 / 6) * N * (np.sqrt(5) + 8) + (U**2 / 24) * Hh

@@ -24,7 +24,7 @@ def spectral_norm_of_free_fermionic_operator(
         data: T
 ) -> float:
     casted_data = cast_data_to_array(data)
-    return np.linalg.norm(casted_data, ord = 'nuc')
+    return np.linalg.norm(casted_data, ord = 'nuc') / 2
 
 @singledispatch
 def ff_commutator(op1: T, op2: T) -> T:
