@@ -44,7 +44,10 @@ def synthesize_resource_dict_rotations(
         "When synthesizing rotation into clifford plus T, this function does not compute the single-qubit clifford count due to arbitrary rotations.")
     match synthesis_strategy:
         case "gridsynth":
-            t_cost, cx_cost = gridsynth_rotation_cost(np.random.uniform(size=nr), target_error)
+            # This line currently contains a bug, and is therefore replaced by an estimate
+            #t_cost, cx_cost = gridsynth_rotation_cost(np.random.uniform(size=10), 10*target_error / nr)
+            t_cost = nr*3*np.log2(nr / target_error)
+            cx_cost = 0
         case "RUS":
             t_cost, cx_cost = rus_rotation_cost([0.0], target_error/nr)
             t_cost *= nr

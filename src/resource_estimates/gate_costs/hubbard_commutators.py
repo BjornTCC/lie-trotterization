@@ -35,25 +35,14 @@ class MixedControlledHappa(ResourceGate):
 
 class SpinSymmetricMixedControlledKappa(ResourceGate):
 
-    @property
-    def ancilla_qubits(self) -> int:
-        return 1
 
     @property
     def x(self) -> int:
-        return 2
+        return 4
 
     @property
     def h(self) -> int:
-        return 4 * 2
-
-    @property
-    def s(self) -> int:
-        return 4 * 1
-
-    @property
-    def sdg(self) -> int:
-        return 4 * 1
+        return 6
 
     @property
     def ry(self) -> int:
@@ -61,62 +50,47 @@ class SpinSymmetricMixedControlledKappa(ResourceGate):
 
     @property
     def tdg(self) -> int:
-        return 4*1
+        return 8
 
     @property
     def t(self) -> int:
-        return 4*1
+        return 8
 
     @property
     def toffoli(self) -> int:
-        return 4
+        return 0
 
     @property
     def cx(self) -> int:
-        return 6 + 4*4
+        return 24
 
-    @property
-    def fswap(self) -> int:
-        return 2
 
 class SpinSymmetricMixedControlledHappa(ResourceGate):
 
     @property
-    def ancilla_qubits(self) -> int:
-        return 1
-
-    @property
     def x(self) -> int:
-        return 2
+        return 4
 
     @property
     def h(self) -> int:
-        return 4 * 2
+        return 4
 
     @property
-    def s(self) -> int:
-        return 4 * 1
-
-    @property
-    def sdg(self) -> int:
-        return 4 * 1
-
-    @property
-    def ry(self) -> int:
+    def rz(self) -> int:
         return 2
 
     @property
     def tdg(self) -> int:
-        return 4 * 1
+        return 8
 
     @property
     def t(self) -> int:
-        return 4 * 1
+        return 8
 
     @property
     def toffoli(self) -> int:
-        return 4
+        return 0
 
     @property
     def cx(self) -> int:
-        return 6 + 4 * 4
+        return 24
