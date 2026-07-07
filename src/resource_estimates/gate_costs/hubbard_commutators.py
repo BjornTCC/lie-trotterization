@@ -62,7 +62,7 @@ class SpinSymmetricMixedControlledKappa(ResourceGate):
 
     @property
     def cx(self) -> int:
-        return 24
+        return 22
 
 
 class SpinSymmetricMixedControlledHappa(ResourceGate):
@@ -93,4 +93,4 @@ class SpinSymmetricMixedControlledHappa(ResourceGate):
 
     @property
     def cx(self) -> int:
-        return 24
+        return 22

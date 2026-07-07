@@ -35,6 +35,10 @@ class HWPGate(ResourceGate):
         self._ry = 0
         self._rx = 0
 
+        self._t_depth = ...
+        self._toffoli_depth = ...
+        self._rotation_depth = ...
+
         for gate in gate_labels:
             if gate in ["rz", "rx", "ry", "toffoli"]:
                 continue

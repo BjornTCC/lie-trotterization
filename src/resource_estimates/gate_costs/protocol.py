@@ -11,11 +11,20 @@ gate_labels = [
     "x", "y", "z"
 ]
 
+depth_labels = [
+    "t_depth",
+    "toffoli_depth",
+    "rotation_depth"
+]
+
 class ResourceGate(ABC):
 
     def __init__(self) -> None:
         self._ancilla_qubits = 0
         for gate in gate_labels:
+            setattr(self, "_" + gate, 0)
+
+        for gate in depth_labels:
             setattr(self, "_" + gate, 0)
 
     @property
@@ -86,8 +95,23 @@ class ResourceGate(ABC):
     def arbitrary_rotations(self) -> int:
         return self.rx + self.ry + self.rz
 
+    @property
+    def t_depth(self) -> int:
+        return self._t_depth
+
+    @property
+    def toffoli_depth(self) -> int:
+        return self._toffoli_depth
+
+    @property
+    def rotation_depth(self) -> int:
+        return self._rotation_depth
+
     def to_qiskit_circuit(self, register: QuantumRegister, qubits: list, parameters: list) -> QuantumCircuit:
         raise NotImplementedError(f"Qiskit circuit for ResourceGate {self} not implemented")
 
     def gate_costs_as_dict(self) -> dict[str: int]:
         return {x: getattr(self, x) for x in gate_labels if getattr(self, x) > 0}
+
+    def non_clifford_depths(self) -> dict[str: int]:
+        return {x: getattr(self, x) for x in depth_labels if getattr(self, x) > 0}
