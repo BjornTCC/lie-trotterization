@@ -45,11 +45,15 @@ def adaptive_phase_estimation_resources(
 
     for nlayers, gate_bundle in zip([unitary_applications, Npe], [unitary_gates, gates_per_trotter_step]):
         for gate, count in gate_bundle.items():
+            try:
+                cgate = gate.symmetric_controlled()
+            except NotImplementedError:
+                cgate = gate
             for g in gate_labels:
                 if g in res.keys():
-                    res[g] += nlayers * count * getattr(gate, g)
+                    res[g] += nlayers * count * getattr(cgate, g)
                 else:
-                    res[g] = nlayers * count * getattr(gate, g)
+                    res[g] = nlayers * count * getattr(cgate, g)
 
     if x is None:
         return {x: y for x, y in res.items() if y != 0}
@@ -96,11 +100,15 @@ def quantum_phase_estimation_resources(
 
     for nlayers, gate_bundle in zip([unitary_applications, Npe], [unitary_gates, gates_per_trotter_step]):
         for gate, count in gate_bundle.items():
+            try:
+                cgate = gate.symmetric_controlled()
+            except NotImplementedError:
+                cgate = gate
             for g in gate_labels:
                 if g in res.keys():
-                    res[g] += nlayers * count * getattr(gate, g)
+                    res[g] += nlayers * count * getattr(cgate, g)
                 else:
-                    res[g] = nlayers * count * getattr(gate, g)
+                    res[g] = nlayers * count * getattr(cgate, g)
 
     if x is None:
         return {x: y for x, y in res.items() if y != 0}

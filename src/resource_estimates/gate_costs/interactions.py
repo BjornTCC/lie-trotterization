@@ -2,35 +2,45 @@ from src.resource_estimates.gate_costs.protocol import ResourceGate
 
 class AncillaOccupationPair(ResourceGate):
 
-    @property
-    def ancilla_qubits(self) -> int:
-        return 1
+    def __post_init__(self) -> None:
+        self._ancilla_qubits = 1
+        self._rz = 1
+        self._toffoli = 2
 
-    @property
-    def rz(self) -> int:
-        return 1
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledAncillaOccupationPair()
 
-    @property
-    def toffoli(self) -> int:
-        return 2
+class ControlledAncillaOccupationPair(ResourceGate):
 
+    def __post_init__(self) -> None:
+        self._ancilla_qubits = 1
+        self._rz = 1
+        self._cx = 2
+        self._toffoli = 2
 class AncillaFreeOccupationPair(ResourceGate):
 
-    @property
-    def rz(self) -> int:
-        return 3
+    def __post_init__(self) -> None:
+        self._rz = 3
+        self._cx = 2
 
-    @property
-    def cx(self) -> int:
-        return 2
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledAncillaFreeOccupationPair()
+class ControlledAncillaFreeOccupationPair(ResourceGate):
 
+    def __post_init__(self) -> None:
+        self._rz = 3
+        self._cx = 4
 
 class ShiftedOccupationPair(ResourceGate):
 
-    @property
-    def rz(self) -> int:
-        return 1
+    def __post_init__(self) -> None:
+        self._rz = 1
+        self._cx = 2
 
-    @property
-    def cx(self) -> int:
-        return 2
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledShiftedOccupationPair()
+class ControlledShiftedOccupationPair(ResourceGate):
+
+    def __post_init__(self) -> None:
+        self._rz = 1
+        self._cx = 4

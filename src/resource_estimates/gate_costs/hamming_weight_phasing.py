@@ -48,3 +48,12 @@ class HWPGate(ResourceGate):
         self._h += sum([2*n*(G.rx + G.ry) for G,n in composite_gates.items()])
         self._s += sum([n*G.ry for G,n in composite_gates.items()])
         self._sdg += sum([n*G.ry for G,n in composite_gates.items()])
+
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledHWPGate(self)
+class ControlledHWPGate(ResourceGate):
+
+    def __init__(self, Gate: HWPGate) -> None:
+        for gate in gate_labels:
+            setattr(self, "_" + gate, getattr(Gate, "_" + gate))
+        self._cx += 2*self._rz

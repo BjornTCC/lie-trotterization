@@ -14,7 +14,7 @@ class Fswap(ResourceGate):
 
 def fswap_network_count(
         permutation: list[int]
-) -> dict[Fswap: int]:
+) -> int:
     res = 0
     _permutation = deepcopy(permutation)
     N = len(_permutation)
@@ -27,5 +27,4 @@ def fswap_network_count(
                 swapped = True
         if not swapped:
             break
-
-    return {Fswap():res}
+    return res

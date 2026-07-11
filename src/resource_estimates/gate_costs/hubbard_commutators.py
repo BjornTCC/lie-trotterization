@@ -2,95 +2,81 @@ from src.resource_estimates.gate_costs.protocol import ResourceGate
 
 class MixedControlledKappa(ResourceGate):
 
-    @property
-    def ry(self) -> int:
-        return 2
+    def __post_init__(self) -> None:
+        self._ry = 2
+        self._toffoli = 4
+        self._cx = 2
 
-    @property
-    def toffoli(self) -> int:
-        return 4
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledMixedControlledKappa()
+class ControlledMixedControlledKappa(ResourceGate):
 
-    @property
-    def cx(self) -> int:
-        return 2
+    def __post_init__(self) -> None:
+        self._ry = 2
+        self._toffoli = 4
+        self._cx = 4
 
 class MixedControlledHappa(ResourceGate):
 
-    @property
-    def rz(self) -> int:
-        return 2
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._h = 2
+        self._toffoli = 4
+        self._cx = 2
 
-    @property
-    def h(self) -> int:
-        return 2
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledMixedControlledHappa()
 
-    @property
-    def toffoli(self) -> int:
-        return 4
+class ControlledMixedControlledHappa(ResourceGate):
 
-    @property
-    def cx(self) -> int:
-        return 2
-
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._h = 2
+        self._toffoli = 4
+        self._cx = 4
 
 class SpinSymmetricMixedControlledKappa(ResourceGate):
 
+    def __post_init__(self) -> None:
+        self._x = 4
+        self._h = 6
+        self._ry = 2
+        self._tdg = 8
+        self._t = 8
+        self._toffoli = 0
+        self._cx = 22
 
-    @property
-    def x(self) -> int:
-        return 4
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledSpinSymmetricMixedControlledKappa()
+class ControlledSpinSymmetricMixedControlledKappa(ResourceGate):
 
-    @property
-    def h(self) -> int:
-        return 6
-
-    @property
-    def ry(self) -> int:
-        return 2
-
-    @property
-    def tdg(self) -> int:
-        return 8
-
-    @property
-    def t(self) -> int:
-        return 8
-
-    @property
-    def toffoli(self) -> int:
-        return 0
-
-    @property
-    def cx(self) -> int:
-        return 22
-
+    def __post_init__(self) -> None:
+        self._x = 4
+        self._h = 6
+        self._ry = 2
+        self._tdg = 8
+        self._t = 8
+        self._toffoli = 0
+        self._cx = 24
 
 class SpinSymmetricMixedControlledHappa(ResourceGate):
 
-    @property
-    def x(self) -> int:
-        return 4
+    def __post_init__(self) -> None:
+        self._x = 4
+        self._h = 4
+        self._rz = 2
+        self._tdg = 8
+        self._t = 8
+        self._cx = 22
 
-    @property
-    def h(self) -> int:
-        return 4
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledMixedControlledHappa()
+class ControlledSpinSymmetricMixedControlledHappa(ResourceGate):
 
-    @property
-    def rz(self) -> int:
-        return 2
-
-    @property
-    def tdg(self) -> int:
-        return 8
-
-    @property
-    def t(self) -> int:
-        return 8
-
-    @property
-    def toffoli(self) -> int:
-        return 0
-
-    @property
-    def cx(self) -> int:
-        return 22
+    def __post_init__(self) -> None:
+        self._x = 4
+        self._h = 4
+        self._rz = 2
+        self._tdg = 8
+        self._t = 8
+        self._cx = 24

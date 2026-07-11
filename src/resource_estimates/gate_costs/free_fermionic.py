@@ -2,232 +2,200 @@ from src.resource_estimates.gate_costs.protocol import ResourceGate
 
 class Kappa(ResourceGate):
 
-    @property
-    def ry(self) -> int:
-        return 2
+    def __post_init__(self) -> None:
+        self._ry = 2
+        self._cx = 4
+        self._rotation_depth = 2
 
-    @property
-    def cx(self) -> int:
-        return 4
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledKappa()
 
-    @property
-    def rotation_depth(self) -> int:
-        return 2
+class ControlledKappa(ResourceGate):
+
+    def __post_init__(self) -> None:
+        self._ry = 2
+        self._cx = 6
+        self._rotation_depth = 2
+
 
 class Happa(ResourceGate):
 
-    @property
-    def rz(self) -> int:
-        return 2
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._h = 2
+        self._cx = 4
+        self._rotation_depth = 2
 
-    @property
-    def h(self) -> int:
-        return 2
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledHappa()
+class ControlledHappa(ResourceGate):
 
-    @property
-    def cx(self) -> int:
-        return 4
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._h = 2
+        self._cx = 6
+        self._rotation_depth = 2
 
-    @property
-    def rotation_depth(self) -> int:
-        return 2
 class Occupation(ResourceGate):
 
-    @property
-    def rz(self) -> int:
-        return 1
+    def __post_init__(self) -> None:
+        self._rz = 1
+        self._rotation_depth = 1
 
-    @property
-    def rotation_depth(self) -> int:
-        return 1
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledOccupation()
+class ControlledOccupation(ResourceGate):
+
+    def __post_init__(self) -> None:
+        self._rz = 1
+        self._cx = 2
+        self._rotation_depth = 1
 
 class Fij(ResourceGate):
 
-    @property
-    def t(self) -> int:
-        return 1
-
-    @property
-    def tdg(self) -> int:
-        return 1
-
-    @property
-    def h(self) -> int:
-        return 6
-
-    @property
-    def s(self) -> int:
-        return 3
-
-    @property
-    def cx(self) -> int:
-        return 3
-
-    @property
-    def t_depth(self) -> int:
-        return 2
+    def __post_init__(self) -> None:
+        self._t = 1
+        self._tdg = 1
+        self._h = 1
+        self._s = 3
+        self._cx = 3
+        self._t_depth = 2
 
 fgate = Fij()
 
 class FreeFermionicS1Tile(ResourceGate):
 
-    @property
-    def rz(self) -> int:
-        return 2
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._h = 8
+        self._s = 6
+        self._cx = 2
+        self._rotation_depth = 1
 
-    @property
-    def h(self) -> int:
-        return 8
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledFreeFermionicS1Tile()
+class ControlledFreeFermionicS1Tile(ResourceGate):
 
-    @property
-    def s(self) -> int:
-        return 6
-
-    @property
-    def cx(self) -> int:
-        return 2
-
-    @property
-    def rotation_depth(self) -> int:
-        return 1
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._h = 8
+        self._s = 6
+        self._cx = 6
+        self._rotation_depth = 1
 
 class FreeFermionicS2Tile(ResourceGate):
 
-    @property
-    def rz(self) -> int:
-        return 2 + 2*fgate.rz
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._t = 2 * fgate.t
+        self._tdg = 2 * fgate.tdg
+        self._h = 8 + 2*fgate.h
+        self._s = 6 + 2*fgate.s
+        self._cx = 2 + 2*fgate.cx
 
-    @property
-    def t(self) -> int:
-        return 2*fgate.t
+        self._t_depth = 2*fgate.t_depth
+        self._rotation_depth = 1
 
-    @property
-    def tdg(self) -> int:
-        return 2*fgate.tdg
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledFreeFermionicS2Tile()
 
-    @property
-    def h(self) -> int:
-        return 8 + 2*fgate.h
+class ControlledFreeFermionicS2Tile(ResourceGate):
 
-    @property
-    def s(self) -> int:
-        return 6 + 2*fgate.s
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._t = 2 * fgate.t
+        self._tdg = 2 * fgate.tdg
+        self._h = 8 + 2 * fgate.h
+        self._s = 6 + 2 * fgate.s
+        self._cx = 6 + 2 * fgate.cx
 
-    @property
-    def cx(self) -> int:
-        return 2 + 2*fgate.cx
-
-    @property
-    def t_depth(self) -> int:
-        return 2*fgate.t_depth
-
-    @property
-    def rotation_depth(self) -> int:
-        return 1
+        self._t_depth = 2 * fgate.t_depth
+        self._rotation_depth = 1
 
 class FreeFermionicS3Tile(ResourceGate):
 
-    @property
-    def rz(self) -> int:
-        return 2 + 2 * fgate.t + 2*fgate.tdg + 2*fgate.rz
+    def __post_init__(self) -> None:
+        self._rz = 2 + 2 * fgate.t + 2*fgate.tdg
+        self._t = 4*fgate.t
+        self._tdg = 4* fgate.tdg
+        self._h = 8 + 4*fgate.h
+        self._s = 6 + 4*fgate.s
+        self._cx = 2 + 4*fgate.cx
 
-    @property
-    def t(self) -> int:
-        return 4 * fgate.t
+        self._t_depth = 2 + 2*fgate.t_depth
+        self._rotation_depth = 1 + 2*fgate.t_depth
 
-    @property
-    def tdg(self) -> int:
-        return 4 * fgate.tdg
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledFreeFermionicS3Tile()
 
-    @property
-    def h(self) -> int:
-        return 8 + 4 * fgate.h
+class ControlledFreeFermionicS3Tile(ResourceGate):
 
-    @property
-    def s(self) -> int:
-        return 6 + 4 * fgate.s
+    def __post_init__(self) -> None:
+        self._rz = 2 + 2 * fgate.t + 2 * fgate.tdg
+        self._t = 4 * fgate.t
+        self._tdg = 4 * fgate.tdg
+        self._h = 8 + 4 * fgate.h
+        self._s = 6 + 4 * fgate.s
+        self._cx = 6 + 4 * fgate.cx
 
-    @property
-    def cx(self) -> int:
-        return 2 + 4 * fgate.cx
-
-
-    @property
-    def t_depth(self) -> int:
-        return 2 + 2*fgate.t_depth
-    @property
-    def rotation_depth(self) -> int:
-        return 1 + 2*fgate.t_depth
-
+        self._t_depth = 2 + 2 * fgate.t_depth
+        self._rotation_depth = 1 + 2 * fgate.t_depth
 
 class FreeFermionicS4Tile(ResourceGate):
 
-    @property
-    def rz(self) -> int:
-        return 2 + 6 * fgate.rz
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._t = 6*fgate.t
+        self._tdg = 6*fgate.tdg
+        self._h = 8+ 6*fgate.h
+        self._s = 6 + 6 * fgate.s
+        self._cx = 2 + 6*fgate.cx
+        self._fswap = 2
 
-    @property
-    def t(self) -> int:
-        return 6 * fgate.t
+        self._t_depth = 4*fgate.t_depth
+        self._rotation_depth = 1
 
-    @property
-    def tdg(self) -> int:
-        return 6 * fgate.tdg
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledFreeFermionicS4Tile()
 
-    @property
-    def h(self) -> int:
-        return 8 + 6 * fgate.h
+class ControlledFreeFermionicS4Tile(ResourceGate):
 
-    @property
-    def s(self) -> int:
-        return 6 + 6 * fgate.s
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._t = 6 * fgate.t
+        self._tdg = 6 * fgate.tdg
+        self._h = 8 + 6 * fgate.h
+        self._s = 6 + 6 * fgate.s
+        self._cx = 6 + 6 * fgate.cx
+        self._fswap = 2
 
-    @property
-    def cx(self) -> int:
-        return 2 + 6 * fgate.cx
-
-    @property
-    def fswap(self) -> int:
-        return 2
-
-    @property
-    def t_depth(self) -> int:
-        return 4*fgate.t_depth
-
-    @property
-    def rotation_depth(self) -> int:
-        return 1
+        self._t_depth = 4 * fgate.t_depth
+        self._rotation_depth = 1
 
 class FreeFermionicC4Tile(ResourceGate):
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._t = 4*fgate.t
+        self._tdg = 4*fgate.tdg
+        self._h = 8 + 4*fgate.h
+        self._s = 6 + 4*fgate.s
+        self._cx = 2 + 4* fgate.cx
 
-    @property
-    def rz(self) -> int:
-        return 2 + 4 * fgate.rz
+        self._t_depth = 2*fgate.t_depth
+        self._rotation_depth = 1
 
-    @property
-    def t(self) -> int:
-        return 4 * fgate.t
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledFreeFermionicC4Tile()
 
-    @property
-    def tdg(self) -> int:
-        return 4 * fgate.tdg
+class ControlledFreeFermionicC4Tile(ResourceGate):
 
-    @property
-    def h(self) -> int:
-        return 8 + 4 * fgate.h
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._t = 4 * fgate.t
+        self._tdg = 4 * fgate.tdg
+        self._h = 8 + 4 * fgate.h
+        self._s = 6 + 4 * fgate.s
+        self._cx = 2 + 4 * fgate.cx
 
-    @property
-    def s(self) -> int:
-        return 6 + 4 * fgate.s
-
-    @property
-    def cx(self) -> int:
-        return 2 + 4 * fgate.cx
-
-    @property
-    def t_depth(self) -> int:
-        return 2*fgate.t_depth
-
-    @property
-    def rotation_depth(self) -> int:
-        return 1
+        self._t_depth = 2 * fgate.t_depth
+        self._rotation_depth = 1

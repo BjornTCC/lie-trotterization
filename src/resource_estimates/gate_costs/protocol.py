@@ -1,3 +1,4 @@
+from __future__ import annotations
 
 from abc import ABC
 
@@ -19,13 +20,14 @@ depth_labels = [
 
 class ResourceGate(ABC):
 
-    def __init__(self) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         self._ancilla_qubits = 0
         for gate in gate_labels:
             setattr(self, "_" + gate, 0)
 
         for gate in depth_labels:
             setattr(self, "_" + gate, 0)
+        self.__post_init__(*args, **kwargs)
 
     @property
     def ancilla_qubits(self) -> int:
@@ -106,6 +108,9 @@ class ResourceGate(ABC):
     @property
     def rotation_depth(self) -> int:
         return self._rotation_depth
+
+    def symmetric_controlled(self) -> ResourceGate:
+        raise NotImplementedError(f"Resource gate {self}, does not have symmetric_controlled implemented.")
 
     def to_qiskit_circuit(self, register: QuantumRegister, qubits: list, parameters: list) -> QuantumCircuit:
         raise NotImplementedError(f"Qiskit circuit for ResourceGate {self} not implemented")

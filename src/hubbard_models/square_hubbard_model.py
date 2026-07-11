@@ -221,3 +221,75 @@ def plaquette_decomposition_permutations(L: int) -> list[int]:
         )
 
     return permutation
+
+def augmented_permutations(L: int) -> dict[str: list]:
+    res = {}
+    assert not (L % 2)
+    N = L**2
+    red_order = {}
+    blue_order = {}
+    reflected_order = {}
+
+    c1, c2 = 0,0
+    for i in range(N // 4):
+        red_order[4 * i + 0] = (
+            c1,c2
+        )
+        red_order[4 * i + 1] = (
+            c1 + 1,c2
+        )
+        red_order[4 * i + 2] = (
+            c1,c2+1
+        )
+        red_order[4 * i + 3] = (
+            c1+1,c2+1
+        )
+
+        reflected_order[4 * i + 0] = (
+            c1, c2
+        )
+        reflected_order[4 * i + 1] = (
+            c1, c2 + 1
+        )
+        reflected_order[4 * i + 2] = (
+            c1 + 1, c2
+        )
+        reflected_order[4 * i + 3] = (
+            c1 + 1, c2 + 1
+        )
+
+        blue_order[4 * i + 0] = (
+            c1, c2
+        )
+        blue_order[4 * i + 1] = (
+            (c1 + 3) % L,(c2) % L
+        )
+        blue_order[4 * i + 2] = (
+            (c1 ) % L,(c2+3) % L
+        )
+        blue_order[4 * i + 3] = (
+            (c1 +3) % L,(c2+3) % L
+        )
+        if 2*(i+1) % L == 0:
+            c1 = 0
+            c2 += 2
+        else:
+            c1 += 2
+
+    blue_order_rev = {y:x for x,y in blue_order.items()}
+    red_order_rev = {y:x for x,y in red_order.items()}
+    reflected_order_rev = {y:x for x,y in reflected_order.items()}
+    permutation_rta = []
+    permutation_ref = []
+    for i in range(N):
+        permutation_rta.append(
+            blue_order_rev[red_order[i]]
+        )
+        permutation_ref.append(
+            reflected_order_rev[red_order[i]]
+        )
+    res["red_to_augred"] = permutation_rta
+    res["augred_to_augblue"] = plaquette_decomposition_permutations(L)
+    res["red_reflection"] = permutation_ref
+
+    return res
