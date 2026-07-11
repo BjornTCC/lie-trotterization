@@ -10,7 +10,7 @@ from openfermion.utils import hermitian_conjugated
 
 from qiskit.quantum_info import Operator
 
-from src.fermionic.circuits import single_normal_ordered_fermion_operator_circuit
+from circuits import single_normal_ordered_fermion_operator_circuit
 
 def fermion_circuit_matrix(
         op: FermionOperator,
@@ -40,7 +40,7 @@ def compare_circuit_to_matrix(
 
         if len(op.terms) == 1:
             op = op / 2
-    check_matrix = fermion_to_matrix(op, theta, n_qubits)
+    check_matrix = fermion_circuit_matrix(op, theta, n_qubits)
     if verbose:
         print("\nop:")
         print(op)
@@ -93,6 +93,7 @@ if __name__ == "__main__":
         for coeff in [1.0, 1j, 2 + 3*1j]:
             for dec_order in [order // 2]:
             #for dec_order in range(order + 1):
+                qubits_ind = list(range(max_qubits))
                 inc_order = order - dec_order
                 inc_inds = list(get_sorted_subsets_of_size(qubits_ind, inc_order))
                 dec_inds = list(get_sorted_subsets_of_size(qubits_ind, dec_order))

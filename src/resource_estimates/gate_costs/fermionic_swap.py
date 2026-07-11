@@ -11,31 +11,22 @@ class Fswap(ResourceGate):
         self._s = 2
         self._sdg = 6
 
+
 def fswap_network_count(
         permutation: list[int]
 ) -> dict[Fswap: int]:
-    permutation = {i: j for i,j in enumerate(permutation)}
 
     res = 0
     _permutation = deepcopy(permutation)
     N = len(_permutation)
-    for i in range(N - 1):
-        j = i
-        if j < N - 1:
-            while _permutation[j + 1] < _permutation[j]:
+    while True:
+        swapped = False
+        for i in range(1,N):
+            if _permutation[i-1] > _permutation[i]:
+                _permutation[i], _permutation[i - 1] = _permutation[i - 1], _permutation[i]
                 res += 1
-                _permutation[j], _permutation[j + 1] = _permutation[j + 1], _permutation[j]
-                if j == N - 2:
-                    break
-                else:
-                    j += 1
-        j = i
-        if j > 0:
-            while _permutation[j - 1] > _permutation[j]:
-                res += 1
-                _permutation[j], _permutation[j - 1] = _permutation[j - 1], _permutation[j]
-                if j == 1:
-                    break
-                else:
-                    j -= 1
-    return res
+                swapped = True
+        if not swapped:
+            break
+
+    return {Fswap():res}

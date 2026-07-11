@@ -173,3 +173,51 @@ def plaquette_decomposition_graphs(L: int) -> tuple[nx.Graph, nx.Graph, nx.Graph
                 ])
 
     return red, blue, whole
+
+def plaquette_decomposition_permutations(L: int) -> list[int]:
+    assert not (L % 2)
+    N = L**2
+    red_order = {}
+    blue_order = {}
+
+    c1, c2 = 0,0
+    for i in range(N // 4):
+        red_order[4 * i + 0] = (
+            c1,c2
+        )
+        red_order[4 * i + 1] = (
+            c1 + 1,c2
+        )
+        red_order[4 * i + 2] = (
+            c1,c2+1
+        )
+        red_order[4 * i + 3] = (
+            c1+1,c2+1
+        )
+
+        blue_order[4 * i + 0] = (
+            c1, c2
+        )
+        blue_order[4 * i + 1] = (
+            (c1 - 1) % L,(c2) % L
+        )
+        blue_order[4 * i + 2] = (
+            (c1 ) % L,(c2-1) % L
+        )
+        blue_order[4 * i + 3] = (
+            (c1 - 1) % L,(c2-1) % L
+        )
+        if 2*(i+1) % L == 0:
+            c1 = 0
+            c2 += 2
+        else:
+            c1 += 2
+
+    blue_order_rev = {y:x for x,y in blue_order.items()}
+    permutation = []
+    for i in range(N):
+        permutation.append(
+            blue_order_rev[red_order[i]]
+        )
+
+    return permutation

@@ -65,25 +65,16 @@ def get_fswap_network(
     res = QuantumCircuit(register)
     _permutation = deepcopy(permutation)
     N = len(_permutation)
-    for i in range(N-1):
-        j = i
-        if j < N-1:
-            while _permutation[j+1] < _permutation[j] :
-                fswap(res, j, j+1)
-                _permutation[j], _permutation[j+1] = _permutation[j+1], _permutation[j]
-                if j == N-2:
-                    break
-                else:
-                    j += 1
-        j = i
-        if j > 0:
-            while _permutation[j-1] > _permutation[j] :
-                fswap(res, j-1, j)
-                _permutation[j], _permutation[j-1] = _permutation[j-1], _permutation[j]
-                if j == 1:
-                    break
-                else:
-                    j -= 1
+
+    while True:
+        swapped = False
+        for i in range(1,N):
+            if _permutation[i-1] > _permutation[i]:
+                _permutation[i], _permutation[i - 1] = _permutation[i - 1], _permutation[i]
+                fswap(res, i, i-1, inplace=True)
+                swapped = True
+        if not swapped:
+            break
     return res
 
 def compute_signs_due_to_n_bits(
