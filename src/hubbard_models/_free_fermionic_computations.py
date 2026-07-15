@@ -2,6 +2,8 @@
 Contains primitives for computing free-fermionic quantities using the fact that free fermionic systems are efficiently simulable.
 """
 
+from copy import deepcopy
+
 from functools import singledispatch
 from typing import TypeVar
 import warnings
@@ -37,6 +39,28 @@ def cast_data_to_array(data: T) -> np.ndarray:
     doesn't match any of the registered types below.
     """
     raise TypeError(f"Unsupported type: {type(data)}")
+
+def multiply_graph_by(G: nx.Graph, w: float) -> nx.Graph:
+    res = deepcopy(G)
+    for edge in res.edges:
+        try:
+            res[edge[0]][edge[1]]["weight"] *= w
+        except KeyError:
+            res[edge[0]][edge[1]]["weight"] = w
+    return res
+
+def add_graphs(G1: nx.Graph, G2: nx.Graph, scale_2: float = 1.0) -> nx.Graph:
+    G = nx.Graph()
+    G.add_nodes_from(G1.nodes)
+    G.add_weighted_edges_from([(*e, G1[e[0]][e[1]]["weight"]) for e in G1.edges])
+    for edge in G2.edges:
+        if edge in G.edges:
+            G[edge[0]][edge[1]]["weight"] += scale_2 * G2[edge[0]][edge[1]]["weight"]
+        else:
+            G.add_edge(*edge)
+            G[edge[0]][edge[1]]["weight"] = scale_2 * G2[edge[0]][edge[1]]["weight"]
+    return G
+
 
 # Workhorse code
 
@@ -119,12 +143,12 @@ def _commutator_of_graphs(G1: nx.Graph, G2: nx.Graph) -> nx.DiGraph:
         warnings.warn(node_reordering_warning)
     res.add_nodes_from(nodes)
     if nx.is_weighted(G1):
-        edge_weights_1 = {edge: G1[edge[0]][edge[1]][["weight"]] for edge in G1.edges}
+        edge_weights_1 = {edge: G1[edge[0]][edge[1]]["weight"] for edge in G1.edges}
     else:
         edge_weights_1 = {edge: 1 for edge in G1.edges}
 
     if nx.is_weighted(G2):
-        edge_weights_2 = {edge: G2[edge[0]][edge[1]][["weight"]] for edge in G2.edges}
+        edge_weights_2 = {edge: G2[edge[0]][edge[1]]["weight"] for edge in G2.edges}
     else:
         edge_weights_2 = {edge: 1 for edge in G2.edges}
 
