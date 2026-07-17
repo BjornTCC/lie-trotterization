@@ -1,14 +1,35 @@
 import networkx as nx
 import numpy as np
 
-from src.hubbard_models._free_fermionic_computations import spectral_norm_of_free_fermionic_operator
+from src.hubbard_models._free_fermionic_computations import spectral_norm_of_free_fermionic_operator, ff_commutator
 
-def second_order_split_operator_error_coefficient(U: float, tau: float, N: int, hopping_graph: nx.Graph) -> float:
+def plaquette_second_order_split_operator_error_coefficient(U: float, tau: float, N: int, hopping_graph: nx.Graph) -> float:
     Hh = 2*tau * 2*spectral_norm_of_free_fermionic_operator(hopping_graph)
     return min(
         (U**2 / 12) * Hh + (U * 4*tau**2 / 12) * N * (np.sqrt(5) + 8),
         (U * 4*tau**2 / 6) * N * (np.sqrt(5) + 8) + (U**2 / 24) * Hh
     )
+
+def second_order_split_operator_error_coefficient(U: float, tau: float, N: int, hopping_graph: nx.Graph) -> float:
+    Hh = tau * 2*spectral_norm_of_free_fermionic_operator(hopping_graph)
+    BIHI = U**2 * Hh
+
+    _HHI_term = 0.0
+    for node in hopping_graph.nodes:
+        TI = nx.Graph()
+        TI.add_nodes_from(hopping_graph.nodes(data = True))
+        for edge in hopping_graph.edges:
+            if node in edge:
+                if nx.is_weighted(hopping_graph):
+                    TI.add_edge(*edge, weight = hopping_graph[edge[0]][edge[1]]["weight"])
+                else:
+                    TI.add_edge(*edge, weight = 1.0)
+
+        _HHI_term += 2*spectral_norm_of_free_fermionic_operator(ff_commutator(TI, hopping_graph)) + 8*spectral_norm_of_free_fermionic_operator(TI)**2
+
+    BHHI = (U / 2) * tau**2 * _HHI_term
+
+    return min(BHHI / 12 + BIHI / 24, BHHI / 24 + BIHI / 12)
 
 def fourth_order_suzuki_trotter_split_operator_error_coefficient(U: float, tau: float, N: int, d: int) -> float:
     return d*tau*U*N*min(

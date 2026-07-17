@@ -20,7 +20,7 @@ from hamiltonians.primitives import hubbard_from_nx
 
 from src.hubbard_models._free_fermionic_computations import spectral_norm_of_free_fermionic_operator, ff_commutator, cast_data_to_array
 from src.hubbard_models.split_operator_error_coefficients import (
-    second_order_split_operator_error_coefficient,
+    plaquette_second_order_split_operator_error_coefficient,
     fourth_order_suzuki_trotter_split_operator_error_coefficient,
     fourth_order_augmented_split_operator_error_coefficients
 )
@@ -135,7 +135,7 @@ def _augmented_free_fermionic_formula_error(t: float, U: float, tau: float, L: i
 
 def second_order_error_coefficient(U: float, tau: float, L: int) -> float:
     G_red, G_blue, G = plaquette_decomposition_graphs(L)
-    WSO = second_order_split_operator_error_coefficient(U, tau, L**2, G)
+    WSO = plaquette_second_order_split_operator_error_coefficient(U, tau, L**2, G)
 
     commutator_graph = ff_commutator(
         G_red, ff_commutator(G_blue, G_red)
