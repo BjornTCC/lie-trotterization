@@ -90,7 +90,7 @@ def hubbard_model_phase_estimation_resources(
                 hwp=hwp
             )
 
-def hubbard_model_time_evolution(
+def hubbard_model_time_evolution_resources(
         U: float,
         tau: float,
         hopping_graph: nx.Graph,
@@ -655,9 +655,13 @@ def _hamming_weight_phasing_hopping_terms(
         _group_counts = []
         for edge in G.edges:
             weight = G[edge[0]][edge[1]]["weight"]
-            if weight in _group_labels:
-                index = _group_labels.index(weight)
-                _group_counts[index] += 1
+            index = -1
+            for i, c in enumerate(_group_labels):
+                if abs(weight - c) < 1e-12:
+                    index = i
+                    break
+            if index > -1:
+                _group_counts[i] += 1
             else:
                 _group_labels.append(weight)
                 _group_counts.append(1)
@@ -694,9 +698,13 @@ def _hamming_weight_phasing_commutator_term(
         _group_counts = []
         for edge in G.edges:
             weight = G[edge[0]][edge[1]]["weight"]
-            if weight in _group_labels:
-                index = _group_labels.index(weight)
-                _group_counts[index] += 1
+            index = -1
+            for i, c in enumerate(_group_labels):
+                if abs(weight - c) < 1e-12:
+                    index = i
+                    break
+            if index > -1:
+                _group_counts[i] += 1
             else:
                 _group_labels.append(weight)
                 _group_counts.append(1)
