@@ -14,15 +14,18 @@ from src.hubbard_models.split_operator_error_coefficients import (
 )
 from src.hubbard_models.s1_tiling_strategy import (
     second_order_s1_tiling,
-    augmented_s1_tiling
+    augmented_s1_tiling,
+    _color_edge_decomp
 )
 
+from src.resource_estimates.gate_costs.protocol import ResourceGate
 from src.resource_estimates.gate_costs.free_fermionic import FreeFermionicS1Tile
 from src.resource_estimates.gate_costs.interactions import ShiftedOccupationPair
 from src.resource_estimates.gate_costs.hubbard_commutators import (
     SpinSymmetricMixedControlledKappa,
     SpinSymmetricMixedControlledHappa
 )
+from src.resource_estimates.gate_costs.hamming_weight_phasing import HWPGate
 
 from src.resource_estimates.quantum_phase_estimation import (
     quantum_phase_estimation_resources,
@@ -42,7 +45,8 @@ def hubbard_model_phase_estimation_resources(
         decomp: list[nx.Graph] = None,
         decomp_strategy: str = "DSATUR",
         x: float | None = None,
-        synthesize_rotation_with: str = "RUS"
+        synthesize_rotation_with: str = "RUS",
+        hwp: bool = False
 ) -> dict[str: int]:
     match time_evolution_algorithm:
         case "trotter":
@@ -55,7 +59,8 @@ def hubbard_model_phase_estimation_resources(
                 decomp,
                 decomp_strategy,
                 x,
-                synthesize_rotation_with
+                synthesize_rotation_with,
+                hwp=hwp
             )
 
         case "trotter_4th":
@@ -68,7 +73,8 @@ def hubbard_model_phase_estimation_resources(
                 decomp,
                 decomp_strategy,
                 x,
-                synthesize_rotation_with
+                synthesize_rotation_with,
+                hwp=hwp
             )
         case "augmented":
             return _hubbard_model_phase_estimation_resources_augmented(
@@ -80,7 +86,8 @@ def hubbard_model_phase_estimation_resources(
                 decomp,
                 decomp_strategy,
                 x,
-                synthesize_rotation_with
+                synthesize_rotation_with,
+                hwp=hwp
             )
 
 def hubbard_model_time_evolution(
@@ -93,7 +100,8 @@ def hubbard_model_time_evolution(
         decomp: list[nx.Graph] = None,
         decomp_strategy: str = "DSATUR",
         x: float | None = None,
-        synthesize_rotation_with: str = "RUS"
+        synthesize_rotation_with: str = "RUS",
+        hwp: bool = False
 ) -> dict[str: int]:
     match algorithm:
         case "trotter":
@@ -106,7 +114,8 @@ def hubbard_model_time_evolution(
                 decomp,
                 decomp_strategy,
                 x = x,
-                synthesize_rotation_with=synthesize_rotation_with
+                synthesize_rotation_with=synthesize_rotation_with,
+                hwp=hwp
             )
         case "trotter_4th":
             return _hubbard_model_time_evolution_resources_trotter_4th_suzuki_trotter(
@@ -118,7 +127,8 @@ def hubbard_model_time_evolution(
                 decomp,
                 decomp_strategy,
                 x = x,
-                synthesize_rotation_with=synthesize_rotation_with
+                synthesize_rotation_with=synthesize_rotation_with,
+                hwp=hwp
             )
         case "augmented":
             return _hubbard_model_time_evolution_resources_augmented(
@@ -130,7 +140,8 @@ def hubbard_model_time_evolution(
                 decomp,
                 decomp_strategy,
                 x = x,
-                synthesize_rotation_with=synthesize_rotation_with
+                synthesize_rotation_with=synthesize_rotation_with,
+                hwp=hwp
             )
 
 def _hubbard_model_phase_estimation_resources_2nd_order(
@@ -142,7 +153,8 @@ def _hubbard_model_phase_estimation_resources_2nd_order(
         decomp: list[nx.Graph] = None,
         decomp_strategy: str = "DSATUR",
         x: float | None = None,
-        synthesize_rotation_with: str = "RUS"
+        synthesize_rotation_with: str = "RUS",
+        hwp: bool = False,
 ) -> dict[str: int]:
     d = max(dict(hopping_graph.degree).values())
     N = len(hopping_graph.nodes)
@@ -156,16 +168,9 @@ def _hubbard_model_phase_estimation_resources_2nd_order(
     W = (second_order_split_operator_error_coefficient(U, hopping_integral, N, hopping_graph)
          + second_order_error_coefficient_of_free_fermionic_operator(hopping_decomposition)
          )
+    Nedges = len(hopping_graph.edges)
 
-    Num_s1_tiles = 2*sum([len(G.edges) for G in hopping_decomposition])
-    trotter_step_gates = {
-        FreeFermionicS1Tile(): Num_s1_tiles,
-        ShiftedOccupationPair(): N
-    }
-    unitary_gates = {
-        ShiftedOccupationPair(): N
-    }
-
+    trotter_step_gates, unitary_gates = _gate_step_qpe(N, None, hopping_decomposition, Nedges, "trotter", hwp)
     match phase_estimation_algorithm:
         case "adaptive":
             return adaptive_phase_estimation_resources(
@@ -196,7 +201,8 @@ def _hubbard_model_phase_estimation_resources_4th_order_suzuki_trotter(
         decomp: list[nx.Graph] = None,
         decomp_strategy: str = "DSATUR",
         x: float | None = None,
-        synthesize_rotation_with: str = "RUS"
+        synthesize_rotation_with: str = "RUS",
+        hwp: bool = False,
 ) -> dict[str: int]:
     d = max(dict(hopping_graph.degree).values())
     N = len(hopping_graph.nodes)
@@ -208,16 +214,9 @@ def _hubbard_model_phase_estimation_resources_4th_order_suzuki_trotter(
     hopping_decomposition = second_order_s1_tiling(hopping_graph, decomp, strategy=decomp_strategy)
 
     W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, hopping_integral, N, d)
+    Nedges = len(hopping_graph.edges)
 
-    Num_s1_tiles = 2*sum([len(G.edges) for G in hopping_decomposition])
-    trotter_step_gates = {
-        FreeFermionicS1Tile(): 5*Num_s1_tiles,
-        ShiftedOccupationPair(): 5*N
-    }
-    unitary_gates = {
-        ShiftedOccupationPair(): N
-    }
-
+    trotter_step_gates, unitary_gates = _gate_step_qpe(N, None, hopping_decomposition, Nedges, "trotter_4th", hwp)
     match phase_estimation_algorithm:
         case "adaptive":
             return adaptive_phase_estimation_resources(
@@ -248,7 +247,8 @@ def _hubbard_model_phase_estimation_resources_augmented(
         decomp: list[nx.Graph] = None,
         decomp_strategy: str = "DSATUR",
         x: float | None = None,
-        synthesize_rotation_with: str = "RUS"
+        synthesize_rotation_with: str = "RUS",
+        hwp: bool = False,
 ) -> dict[str: int]:
     d = max(dict(hopping_graph.degree).values())
     N = len(hopping_graph.nodes)
@@ -276,18 +276,14 @@ def _hubbard_model_phase_estimation_resources_augmented(
     )
 
     hopping_decomposition = augmented_s1_tiling(hopping_graph, decomp, strategy=decomp_strategy)
-
     Nedges = len(hopping_graph.edges)
-    Num_s1_tiles = 2*sum([len(G.edges) for G in hopping_decomposition])
-    trotter_step_gates = {
-        FreeFermionicS1Tile(): Num_s1_tiles,
-        ShiftedOccupationPair(): 2*N,
-        SpinSymmetricMixedControlledHappa(): Nedges
-    }
-    unitary_gates = {
-        SpinSymmetricMixedControlledKappa(): Nedges
-    }
 
+    if decomp is None:
+        _decomp = _color_edge_decomp(hopping_graph, strategy=decomp_strategy)
+    else:
+        _decomp = decomp
+
+    trotter_step_gates, unitary_gates = _gate_step_qpe(N, _decomp, hopping_decomposition, Nedges, "augmented", hwp)
     match phase_estimation_algorithm:
         case "adaptive":
             return adaptive_phase_estimation_resources(
@@ -318,7 +314,8 @@ def _hubbard_model_time_evolution_resources_trotter(
         decomp: list[nx.Graph] = None,
         decomp_strategy: str = "DSATUR",
         x: float | None = None,
-        synthesize_rotation_with: str = "RUS"
+        synthesize_rotation_with: str = "RUS",
+        hwp: bool = False,
 ) -> dict[str: int]:
     d = max(dict(hopping_graph.degree).values())
     N = len(hopping_graph.nodes)
@@ -332,16 +329,9 @@ def _hubbard_model_time_evolution_resources_trotter(
     W = (second_order_split_operator_error_coefficient(U, hopping_integral, N, hopping_graph)
          + second_order_error_coefficient_of_free_fermionic_operator(hopping_decomposition)
          )
+    Nedges = len(hopping_graph.edges)
 
-    Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
-    trotter_step_gates = {
-        FreeFermionicS1Tile(): Num_s1_tiles,
-        ShiftedOccupationPair(): N
-    }
-    outer_gates = {
-        ShiftedOccupationPair(): N
-    }
-
+    trotter_step_gates, outer_gates = _gate_step_evolution(N, None, hopping_decomposition, Nedges, "trotter", hwp)
     return hamiltonian_simulation_cost(
         t,
         target_error,
@@ -361,7 +351,8 @@ def _hubbard_model_time_evolution_resources_trotter_4th_suzuki_trotter(
         decomp: list[nx.Graph] = None,
         decomp_strategy: str = "DSATUR",
         x: float | None = None,
-        synthesize_rotation_with: str = "RUS"
+        synthesize_rotation_with: str = "RUS",
+        hwp: bool = False,
 ) -> dict[str: int]:
     d = max(dict(hopping_graph.degree).values())
     N = len(hopping_graph.nodes)
@@ -373,15 +364,8 @@ def _hubbard_model_time_evolution_resources_trotter_4th_suzuki_trotter(
     hopping_decomposition = second_order_s1_tiling(hopping_graph, decomp, strategy=decomp_strategy)
 
     W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, hopping_integral, N, d)
-
-    Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
-    trotter_step_gates = {
-        FreeFermionicS1Tile(): 5 * Num_s1_tiles,
-        ShiftedOccupationPair(): 5 * N
-    }
-    outer_gates = {
-        ShiftedOccupationPair(): N
-    }
+    Nedges = len(hopping_graph.edges)
+    trotter_step_gates, outer_gates = _gate_step_evolution(N, None, hopping_decomposition, Nedges, "trotter_4th", hwp)
     return hamiltonian_simulation_cost(
         t,
         target_error,
@@ -401,7 +385,8 @@ def _hubbard_model_time_evolution_resources_augmented(
         decomp: list[nx.Graph] = None,
         decomp_strategy: str = "DSATUR",
         x: float | None = None,
-        synthesize_rotation_with: str = "RUS"
+        synthesize_rotation_with: str = "RUS",
+        hwp: bool = False,
 ) -> dict[str: int]:
     d = max(dict(hopping_graph.degree).values())
     N = len(hopping_graph.nodes)
@@ -427,14 +412,13 @@ def _hubbard_model_time_evolution_resources_augmented(
 
     Nedges = len(hopping_graph.edges)
     Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
-    trotter_step_gates = {
-        FreeFermionicS1Tile(): Num_s1_tiles,
-        ShiftedOccupationPair(): 2 * N,
-        SpinSymmetricMixedControlledHappa(): Nedges
-    }
-    outer_gates = {
-        SpinSymmetricMixedControlledKappa(): 2*Nedges
-    }
+
+    if decomp is None:
+        _decomp = _color_edge_decomp(hopping_graph, strategy=decomp_strategy)
+    else:
+        _decomp = decomp
+
+    trotter_step_gates, outer_gates = _gate_step_evolution(N, _decomp, hopping_decomposition, Nedges, "augmented", hwp)
     return hamiltonian_simulation_cost(
         t,
         target_error,
@@ -510,3 +494,224 @@ def _augmented_s1_evolution_time_and_steps(
 
     n = math.ceil(root[0])
     return n
+
+def _gate_step_qpe(
+        N: int,
+        single_decomp: list[nx.Graph],
+        hopping_decomposition: list[nx.Graph],
+        Nedges: int,
+        type: str,
+        hamming_weight_phasing: bool
+) -> dict[ResourceGate: int]:
+    if hamming_weight_phasing:
+        match type:
+            case "trotter":
+                trotter_step_gates = _hamming_weight_phasing_hopping_terms(hopping_decomposition)
+                interaction_gates = HWPGate({ShiftedOccupationPair(): N}, N)
+                trotter_step_gates[interaction_gates] = 1
+                outer_gates = {HWPGate({
+                    ShiftedOccupationPair(): N
+                },N) : 1}
+                return trotter_step_gates, outer_gates
+            case "trotter_4th":
+                trotter_step_gates = _hamming_weight_phasing_hopping_terms(hopping_decomposition)
+                for x in trotter_step_gates.keys():
+                    trotter_step_gates[x] *= 5
+                interaction_gates = HWPGate({ShiftedOccupationPair(): N}, N)
+                trotter_step_gates[interaction_gates] = 5
+                outer_gates = {HWPGate({
+                    ShiftedOccupationPair(): N
+                },N) : 1}
+                return trotter_step_gates, outer_gates
+            case "augmented":
+                trotter_step_gates = _hamming_weight_phasing_hopping_terms(hopping_decomposition)
+                interaction_gates = HWPGate({ShiftedOccupationPair(): N}, N)
+                commutator_gates_inner = _hamming_weight_phasing_commutator_term(single_decomp, type = 2)
+                trotter_step_gates[interaction_gates] = 1
+                trotter_step_gates.update(commutator_gates_inner)
+                outer_gates = _hamming_weight_phasing_commutator_term(single_decomp, type = 1)
+                return trotter_step_gates, outer_gates
+    else:
+        match type:
+            case "trotter":
+                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
+                trotter_step_gates = {
+                    FreeFermionicS1Tile(): Num_s1_tiles,
+                    ShiftedOccupationPair(): N
+                }
+                outer_gates = {
+                    ShiftedOccupationPair(): N
+                }
+                return trotter_step_gates, outer_gates
+            case "trotter_4th":
+                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
+                trotter_step_gates = {
+                    FreeFermionicS1Tile(): 5*Num_s1_tiles,
+                    ShiftedOccupationPair(): 5*N
+                }
+                outer_gates = {
+                    ShiftedOccupationPair(): N
+                }
+                return trotter_step_gates, outer_gates
+            case "augmented":
+                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
+                trotter_step_gates = {
+                    FreeFermionicS1Tile(): Num_s1_tiles,
+                    ShiftedOccupationPair(): 2 * N,
+                    SpinSymmetricMixedControlledHappa(): Nedges
+                }
+                outer_gates = {
+                    SpinSymmetricMixedControlledKappa():  Nedges
+                }
+                return trotter_step_gates, outer_gates
+
+def _gate_step_evolution(
+        N: int,
+        single_decomp: list[nx.Graph],
+        hopping_decomposition: list[nx.Graph],
+        Nedges: int,
+        type: str,
+        hamming_weight_phasing: bool
+) -> dict[ResourceGate: int]:
+    if hamming_weight_phasing:
+        match type:
+            case "trotter":
+                trotter_step_gates = _hamming_weight_phasing_hopping_terms(hopping_decomposition)
+                interaction_gates = HWPGate({ShiftedOccupationPair(): N}, N)
+                trotter_step_gates[interaction_gates] = 1
+                outer_gates = {HWPGate({
+                    ShiftedOccupationPair(): N
+                },N) : 1}
+                return trotter_step_gates, outer_gates
+            case "trotter_4th":
+                trotter_step_gates = _hamming_weight_phasing_hopping_terms(hopping_decomposition)
+                for x in trotter_step_gates.keys():
+                    trotter_step_gates[x] *= 5
+                interaction_gates = HWPGate({ShiftedOccupationPair(): N}, N)
+                trotter_step_gates[interaction_gates] = 5
+                outer_gates = {HWPGate({
+                    ShiftedOccupationPair(): N
+                },N) : 1}
+                return trotter_step_gates, outer_gates
+            case "augmented":
+                trotter_step_gates = _hamming_weight_phasing_hopping_terms(hopping_decomposition)
+                interaction_gates = HWPGate({ShiftedOccupationPair(): N}, N)
+                commutator_gates_inner = _hamming_weight_phasing_commutator_term(single_decomp, type = 2)
+                trotter_step_gates[interaction_gates] = 1
+                trotter_step_gates.update(commutator_gates_inner)
+                outer_gates = _hamming_weight_phasing_commutator_term(single_decomp, type = 1)
+                for x in outer_gates.keys():
+                    outer_gates[x] *= 2
+                return trotter_step_gates, outer_gates
+
+    else:
+        match type:
+            case "trotter":
+                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
+                trotter_step_gates = {
+                    FreeFermionicS1Tile(): Num_s1_tiles,
+                    ShiftedOccupationPair(): N
+                }
+                outer_gates = {
+                    ShiftedOccupationPair(): N
+                }
+                return trotter_step_gates, outer_gates
+            case "trotter_4th":
+                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
+                trotter_step_gates = {
+                    FreeFermionicS1Tile(): 5*Num_s1_tiles,
+                    ShiftedOccupationPair(): 5*N
+                }
+                outer_gates = {
+                    ShiftedOccupationPair(): N
+                }
+                return trotter_step_gates, outer_gates
+            case "augmented":
+                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
+                trotter_step_gates = {
+                    FreeFermionicS1Tile(): Num_s1_tiles,
+                    ShiftedOccupationPair(): 2 * N,
+                    SpinSymmetricMixedControlledHappa(): Nedges
+                }
+                outer_gates = {
+                    SpinSymmetricMixedControlledKappa(): 2 * Nedges
+                }
+                return trotter_step_gates, outer_gates
+
+def _hamming_weight_phasing_hopping_terms(
+        hopping_decomposition: list[nx.Graph]
+) -> dict[ResourceGate, int]:
+    res = {}
+    for G in hopping_decomposition:
+        if not nx.is_weighted(G):
+            m = 2*len(G.edges)
+            hwp_gate = HWPGate({
+                FreeFermionicS1Tile(): m
+            }, 2*m)
+            res[hwp_gate] = 1
+            continue
+
+        _group_labels = []
+        _group_counts = []
+        for edge in G.edges:
+            weight = G[edge[0]][edge[1]]["weight"]
+            if weight in _group_labels:
+                index = _group_labels.index(weight)
+                _group_counts[index] += 1
+            else:
+                _group_labels.append(weight)
+                _group_counts.append(1)
+        for c in _group_counts:
+            hwp_gate = HWPGate({
+                FreeFermionicS1Tile(): 2*c},
+                4*c
+            )
+            res[hwp_gate] = 1
+    return res
+
+def _hamming_weight_phasing_commutator_term(
+        hopping_graph_decomp: list[nx.Graph],
+        type: int = 1
+) -> dict[ResourceGate, int]:
+    res = {}
+    for G in hopping_graph_decomp:
+        if not nx.is_weighted(G):
+            m = len(G.edges)
+            if type == 1:
+                hwp_gate = HWPGate({
+                    SpinSymmetricMixedControlledKappa(): m
+                }, m)
+                res[hwp_gate] = 1
+                return res
+            if type == 2:
+                hwp_gate = HWPGate({
+                    SpinSymmetricMixedControlledHappa(): m
+                }, m)
+                res[hwp_gate] = 1
+                return res
+
+        _group_labels = []
+        _group_counts = []
+        for edge in G.edges:
+            weight = G[edge[0]][edge[1]]["weight"]
+            if weight in _group_labels:
+                index = _group_labels.index(weight)
+                _group_counts[index] += 1
+            else:
+                _group_labels.append(weight)
+                _group_counts.append(1)
+        for c in _group_counts:
+            if type == 1:
+                hwp_gate = HWPGate({
+                    SpinSymmetricMixedControlledKappa(): c},
+                    c
+                )
+                res[hwp_gate] = 1
+
+            if type == 2:
+                hwp_gate = HWPGate({
+                    SpinSymmetricMixedControlledHappa(): c},
+                    c
+                )
+                res[hwp_gate] = 1
+    return res
