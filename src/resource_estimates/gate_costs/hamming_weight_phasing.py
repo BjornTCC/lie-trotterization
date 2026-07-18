@@ -11,12 +11,14 @@ Warning: Does not check if the circuit can actually be hamming weight-phased usi
 
 def _compute_num_rotations(dct: dict[ResourceGate: int], m: int) -> int:
     NR = sum([n*G.arbitrary_rotations for G,n in dct.items()])
+    if NR == 0:
+        return 0
     m_rounds = NR // m
     remaining_round_size = NR % m
     if m_rounds > 0 and remaining_round_size == 0:
-        return m_rounds * math.floor(np.log2(m) + 1)
+        return m_rounds * math.floor(np.log2(float(m)) + 1)
     elif m_rounds > 0:
-        return m_rounds * math.floor(np.log2(m) + 1) + math.floor(np.log2(remaining_round_size) + 1)
+        return m_rounds * math.floor(np.log2(float(m)) + 1) + math.floor(np.log2(remaining_round_size) + 1)
     else:
         return math.floor(np.log2(remaining_round_size) + 1)
 class HWPGate(ResourceGate):
