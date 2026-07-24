@@ -38,45 +38,50 @@ class ControlledMixedControlledHappa(ResourceGate):
 class SpinSymmetricMixedControlledKappa(ResourceGate):
 
     def __post_init__(self) -> None:
+        self._ancilla_qubits = 2
         self._x = 4
         self._h = 6
         self._ry = 2
-        self._tdg = 8
+        self._tdg = 0
         self._t = 8
         self._toffoli = 0
-        self._cx = 22
+        self._cx = 26
 
     def symmetric_controlled(self) -> ResourceGate:
         return ControlledSpinSymmetricMixedControlledKappa()
+
 class ControlledSpinSymmetricMixedControlledKappa(ResourceGate):
 
     def __post_init__(self) -> None:
+        self._ancilla_qubits = 2
         self._x = 4
         self._h = 6
         self._ry = 2
-        self._tdg = 8
+        self._tdg = 0
         self._t = 8
         self._toffoli = 0
-        self._cx = 24
+        self._cx = 28
 
 class SpinSymmetricMixedControlledHappa(ResourceGate):
 
     def __post_init__(self) -> None:
+        self._ancilla_qubits = 2
         self._x = 4
         self._h = 4
         self._rz = 2
-        self._tdg = 8
+        self._tdg = 0
         self._t = 8
-        self._cx = 22
+        self._cx = 26
 
     def symmetric_controlled(self) -> ResourceGate:
         return ControlledMixedControlledHappa()
 class ControlledSpinSymmetricMixedControlledHappa(ResourceGate):
 
     def __post_init__(self) -> None:
+        self._ancilla_qubits = 2
         self._x = 4
         self._h = 4
         self._rz = 2
-        self._tdg = 8
+        self._tdg = 0
         self._t = 8
-        self._cx = 24
+        self._cx = 28
