@@ -26,6 +26,7 @@ from src.resource_estimates.gate_costs.hubbard_commutators import (
     SpinSymmetricMixedControlledHappa
 )
 from src.resource_estimates.gate_costs.hamming_weight_phasing import HWPGate
+from src.resource_estimates.gate_costs.parallelized_gate import ParallelizedResourceGate
 
 from src.resource_estimates.quantum_phase_estimation import (
     quantum_phase_estimation_resources,
@@ -332,6 +333,7 @@ def _hubbard_model_time_evolution_resources_trotter(
     Nedges = len(hopping_graph.edges)
 
     trotter_step_gates, outer_gates = _gate_step_evolution(N, None, hopping_decomposition, Nedges, "trotter", hwp)
+
     return hamiltonian_simulation_cost(
         t,
         target_error,
@@ -534,34 +536,41 @@ def _gate_step_qpe(
     else:
         match type:
             case "trotter":
-                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
                 trotter_step_gates = {
-                    FreeFermionicS1Tile(): Num_s1_tiles,
-                    ShiftedOccupationPair(): N
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 1
                 }
+                for g in hopping_decomposition:
+                    new_gate = ParallelizedResourceGate({FreeFermionicS1Tile() : 2*len(g.edges)})
+                    trotter_step_gates[new_gate] = 1
                 outer_gates = {
-                    ShiftedOccupationPair(): N
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 1
                 }
                 return trotter_step_gates, outer_gates
             case "trotter_4th":
-                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
                 trotter_step_gates = {
-                    FreeFermionicS1Tile(): 5*Num_s1_tiles,
-                    ShiftedOccupationPair(): 5*N
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 5
                 }
+                for g in hopping_decomposition:
+                    new_gate = ParallelizedResourceGate({FreeFermionicS1Tile() : 2*len(g.edges)})
+                    trotter_step_gates[new_gate] = 5
                 outer_gates = {
-                    ShiftedOccupationPair(): N
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 1
                 }
                 return trotter_step_gates, outer_gates
             case "augmented":
-                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
                 trotter_step_gates = {
-                    FreeFermionicS1Tile(): Num_s1_tiles,
-                    ShiftedOccupationPair(): 2 * N,
-                    SpinSymmetricMixedControlledHappa(): Nedges
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 2
                 }
+                for g in hopping_decomposition:
+                    new_gate = ParallelizedResourceGate({FreeFermionicS1Tile(): 2 * len(g.edges)})
+                    trotter_step_gates[new_gate] = 1
+
+                for g in single_decomp:
+                    new_gate = ParallelizedResourceGate({SpinSymmetricMixedControlledHappa(): len(g.edges)})
+                    trotter_step_gates[new_gate] = 1
+
                 outer_gates = {
-                    SpinSymmetricMixedControlledKappa():  Nedges
+                    ParallelizedResourceGate({SpinSymmetricMixedControlledKappa(): len(g.edges)}) : 1 for g in single_decomp
                 }
                 return trotter_step_gates, outer_gates
 
@@ -607,34 +616,42 @@ def _gate_step_evolution(
     else:
         match type:
             case "trotter":
-                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
                 trotter_step_gates = {
-                    FreeFermionicS1Tile(): Num_s1_tiles,
-                    ShiftedOccupationPair(): N
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 1
                 }
+                for g in hopping_decomposition:
+                    new_gate = ParallelizedResourceGate({FreeFermionicS1Tile(): 2 * len(g.edges)})
+                    trotter_step_gates[new_gate] = 1
                 outer_gates = {
-                    ShiftedOccupationPair(): N
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 1
                 }
                 return trotter_step_gates, outer_gates
             case "trotter_4th":
-                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
                 trotter_step_gates = {
-                    FreeFermionicS1Tile(): 5*Num_s1_tiles,
-                    ShiftedOccupationPair(): 5*N
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 5
                 }
+                for g in hopping_decomposition:
+                    new_gate = ParallelizedResourceGate({FreeFermionicS1Tile(): 2 * len(g.edges)})
+                    trotter_step_gates[new_gate] = 5
                 outer_gates = {
-                    ShiftedOccupationPair(): N
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 1
                 }
                 return trotter_step_gates, outer_gates
             case "augmented":
-                Num_s1_tiles = 2 * sum([len(G.edges) for G in hopping_decomposition])
                 trotter_step_gates = {
-                    FreeFermionicS1Tile(): Num_s1_tiles,
-                    ShiftedOccupationPair(): 2 * N,
-                    SpinSymmetricMixedControlledHappa(): Nedges
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 2
                 }
+                for g in hopping_decomposition:
+                    new_gate = ParallelizedResourceGate({FreeFermionicS1Tile(): 2 * len(g.edges)})
+                    trotter_step_gates[new_gate] = 1
+
+                for g in single_decomp:
+                    new_gate = ParallelizedResourceGate({SpinSymmetricMixedControlledHappa(): len(g.edges)})
+                    trotter_step_gates[new_gate] = 1
+
                 outer_gates = {
-                    SpinSymmetricMixedControlledKappa(): 2 * Nedges
+                    ParallelizedResourceGate({SpinSymmetricMixedControlledKappa(): len(g.edges)}): 1 for g in
+                    single_decomp
                 }
                 return trotter_step_gates, outer_gates
 
