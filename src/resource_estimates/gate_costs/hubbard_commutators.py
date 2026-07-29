@@ -7,14 +7,22 @@ class MixedControlledKappa(ResourceGate):
         self._toffoli = 4
         self._cx = 2
 
+        self._rotation_depth = 2
+        self._toffoli_depth = 4
+
     def symmetric_controlled(self) -> ResourceGate:
         return ControlledMixedControlledKappa()
+
 class ControlledMixedControlledKappa(ResourceGate):
 
     def __post_init__(self) -> None:
         self._ry = 2
         self._toffoli = 4
         self._cx = 4
+
+        self._rotation_depth = 2
+        self._toffoli_depth = 4
+
 
 class MixedControlledHappa(ResourceGate):
 
@@ -23,6 +31,9 @@ class MixedControlledHappa(ResourceGate):
         self._h = 2
         self._toffoli = 4
         self._cx = 2
+
+        self._rotation_depth = 2
+        self._toffoli_depth = 4
 
     def symmetric_controlled(self) -> ResourceGate:
         return ControlledMixedControlledHappa()
@@ -35,6 +46,9 @@ class ControlledMixedControlledHappa(ResourceGate):
         self._toffoli = 4
         self._cx = 4
 
+        self._rotation_depth = 2
+        self._toffoli_depth = 4
+
 class SpinSymmetricMixedControlledKappa(ResourceGate):
 
     def __post_init__(self) -> None:
@@ -46,6 +60,10 @@ class SpinSymmetricMixedControlledKappa(ResourceGate):
         self._t = 8
         self._toffoli = 0
         self._cx = 26
+
+        self._rotation_depth = 1
+        self._t_depth = 3
+
 
     def symmetric_controlled(self) -> ResourceGate:
         return ControlledSpinSymmetricMixedControlledKappa()
@@ -62,6 +80,9 @@ class ControlledSpinSymmetricMixedControlledKappa(ResourceGate):
         self._toffoli = 0
         self._cx = 28
 
+        self._rotation_depth = 1
+        self._t_depth = 3
+
 class SpinSymmetricMixedControlledHappa(ResourceGate):
 
     def __post_init__(self) -> None:
@@ -73,8 +94,12 @@ class SpinSymmetricMixedControlledHappa(ResourceGate):
         self._t = 8
         self._cx = 26
 
+        self._rotation_depth = 1
+        self._t_depth = 3
+
     def symmetric_controlled(self) -> ResourceGate:
         return ControlledMixedControlledHappa()
+
 class ControlledSpinSymmetricMixedControlledHappa(ResourceGate):
 
     def __post_init__(self) -> None:
@@ -85,3 +110,6 @@ class ControlledSpinSymmetricMixedControlledHappa(ResourceGate):
         self._tdg = 0
         self._t = 8
         self._cx = 28
+
+        self._rotation_depth = 1
+        self._t_depth = 3

@@ -7,6 +7,7 @@ class Kappa(ResourceGate):
         self._cx = 4
         self._rotation_depth = 2
 
+
     def symmetric_controlled(self) -> ResourceGate:
         return ControlledKappa()
 
@@ -16,7 +17,6 @@ class ControlledKappa(ResourceGate):
         self._ry = 2
         self._cx = 6
         self._rotation_depth = 2
-
 
 class Happa(ResourceGate):
 
@@ -28,6 +28,7 @@ class Happa(ResourceGate):
 
     def symmetric_controlled(self) -> ResourceGate:
         return ControlledHappa()
+
 class ControlledHappa(ResourceGate):
 
     def __post_init__(self) -> None:
@@ -44,6 +45,7 @@ class Occupation(ResourceGate):
 
     def symmetric_controlled(self) -> ResourceGate:
         return ControlledOccupation()
+
 class ControlledOccupation(ResourceGate):
 
     def __post_init__(self) -> None:
@@ -74,6 +76,7 @@ class FreeFermionicS1Tile(ResourceGate):
 
     def symmetric_controlled(self) -> ResourceGate:
         return ControlledFreeFermionicS1Tile()
+
 class ControlledFreeFermionicS1Tile(ResourceGate):
 
     def __post_init__(self) -> None:

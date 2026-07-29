@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-from src.resource_estimates.gate_costs.protocol import ResourceGate, gate_labels
+from src.resource_estimates.gate_costs.protocol import ResourceGate, gate_labels, depth_labels
 
 """
 Gate method for handling Hamming Weight Phasing.
@@ -9,18 +9,18 @@ Gate method for handling Hamming Weight Phasing.
 Warning: Does not check if the circuit can actually be hamming weight-phased using the specified parameters!
 """
 
-def _compute_num_rotations(dct: dict[ResourceGate: int], m: int) -> int:
+def _compute_num_rotations(dct: dict[ResourceGate: int], m: int) -> tuple[int, int]:
     NR = sum([n*G.arbitrary_rotations for G,n in dct.items()])
     if NR == 0:
-        return 0
+        return 0, 0
     m_rounds = NR // m
     remaining_round_size = NR % m
     if m_rounds > 0 and remaining_round_size == 0:
-        return m_rounds * math.floor(np.log2(float(m)) + 1)
+        return m_rounds * math.floor(np.log2(float(m)) + 1), m_rounds
     elif m_rounds > 0:
-        return m_rounds * math.floor(np.log2(float(m)) + 1) + math.floor(np.log2(remaining_round_size) + 1)
+        return m_rounds * math.floor(np.log2(float(m)) + 1) + math.floor(np.log2(remaining_round_size) + 1), m_rounds + 1
     else:
-        return math.floor(np.log2(remaining_round_size) + 1)
+        return math.floor(np.log2(remaining_round_size) + 1), 1
 class HWPGate(ResourceGate):
 
     def __init__(
@@ -33,13 +33,12 @@ class HWPGate(ResourceGate):
         self._ancilla_qubits = self.m - 1
         self._extra_toffolis = self.m - 1
         self._toffoli = self._extra_toffolis + sum([n*G.toffoli for G,n in composite_gates.items()])
-        self._rz = _compute_num_rotations(self.composite_gates, m)
+        self._rz, self._rotation_depth = _compute_num_rotations(self.composite_gates, m)
         self._ry = 0
         self._rx = 0
 
-        self._t_depth = ...
-        self._toffoli_depth = ...
-        self._rotation_depth = ...
+        self._t_depth = 0
+        self._toffoli_depth = self._rotation_depth * self._ancilla_qubits
 
         for gate in gate_labels:
             if gate in ["rz", "rx", "ry", "toffoli"]:
@@ -56,6 +55,6 @@ class HWPGate(ResourceGate):
 class ControlledHWPGate(ResourceGate):
 
     def __init__(self, Gate: HWPGate) -> None:
-        for gate in gate_labels:
+        for gate in gate_labels + depth_labels:
             setattr(self, "_" + gate, getattr(Gate, "_" + gate))
         self._cx += 2*self._rz
