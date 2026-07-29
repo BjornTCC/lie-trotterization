@@ -3,7 +3,7 @@ import warnings
 
 from scipy.optimize import fsolve
 
-from src.resource_estimates.gate_costs.protocol import ResourceGate, gate_labels
+from src.resource_estimates.gate_costs.protocol import ResourceGate, gate_labels, depth_labels
 from src.resource_estimates.rotation_synthesis import synthesize_resource_dict_rotations
 
 def hamiltonian_simulation_cost(
@@ -39,7 +39,7 @@ def hamiltonian_simulation_cost(
 
     for nlayers, gate_bundle in zip([1, n], [outer_gates, gates_per_trotter_step]):
         for gate, count in gate_bundle.items():
-            for g in gate_labels:
+            for g in gate_labels + depth_labels:
                 if g in res.keys():
                     res[g] += nlayers*count*getattr(gate, g)
                 else:

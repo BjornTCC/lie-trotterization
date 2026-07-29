@@ -4,7 +4,7 @@ import numpy as np
 
 from scipy.optimize import minimize
 
-from src.resource_estimates.gate_costs.protocol import ResourceGate, gate_labels
+from src.resource_estimates.gate_costs.protocol import ResourceGate, gate_labels, depth_labels
 from src.resource_estimates.rotation_synthesis import synthesize_resource_dict_rotations
 
 def adaptive_phase_estimation_resources(
@@ -49,7 +49,7 @@ def adaptive_phase_estimation_resources(
                 cgate = gate.symmetric_controlled()
             except NotImplementedError:
                 cgate = gate
-            for g in gate_labels:
+            for g in gate_labels + depth_labels:
                 if g in res.keys():
                     res[g] += nlayers * count * getattr(cgate, g)
                 else:
@@ -104,7 +104,7 @@ def quantum_phase_estimation_resources(
                 cgate = gate.symmetric_controlled()
             except NotImplementedError:
                 cgate = gate
-            for g in gate_labels:
+            for g in gate_labels + depth_labels:
                 if g in res.keys():
                     res[g] += nlayers * count * getattr(cgate, g)
                 else:

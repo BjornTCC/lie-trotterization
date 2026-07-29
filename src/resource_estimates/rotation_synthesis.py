@@ -36,7 +36,7 @@ def rus_rotation_cost(theta: float | list[float], eps: float) -> tuple[int,int]:
 def synthesize_resource_dict_rotations(
         resources: dict[str: int],
         target_error: float,
-        synthesis_strategy: float
+        synthesis_strategy: str
 ) -> dict[str: int]:
     res = deepcopy(resources)
     nr = sum([res["rz"], res["rx"], res["ry"]])
@@ -67,4 +67,10 @@ def synthesize_resource_dict_rotations(
         res["cx"] += cx_cost
     else:
         res["cx"] = cx_cost
+
+    if "t_depth" in res.keys():
+        res["t_depth"] += math.ceil(t_cost * res["rotation_depth"] / nr)
+    else:
+        res["t_depth"] = math.ceil(t_cost * res["rotation_depth"] / nr)
+
     return {x: y for x, y in res.items() if y != 0}
