@@ -1,6 +1,6 @@
 from src.resource_estimates.gate_costs.protocol import ResourceGate
 
-class PauliStringGate:
+class PauliStringGate(ResourceGate):
 
     def __post_init__(
             self,
