@@ -39,11 +39,11 @@ def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, 
             np.sqrt(W / eps) * t**(3/2)
         )
     elif type == "plaquette suzuki-trotter":
-        W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L**2,4)
+        #W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L**2,4)
+        W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, L)
         return math.ceil(
             (W / eps)**(1/4) * t**(5/4)
         )
-        #return _plaquette_suzuki_trotter_steps(t,eps,U,tau, L)
     elif type == "augmented plaquette":
         return _augmented_plaquette_trotter_steps(t, eps, U, tau, L)
     else:
@@ -56,20 +56,22 @@ def compute_evolution_time_and_number_of_simulation_circuits_for_qpe(eps: float,
             6.203 * W**(1/2) / (eps**(3/2))
         )
     elif type == "plaquette suzuki-trotter":
-        W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L**2, 4)
+        #W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L**2, 4)
+        W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, L)
         return (eps / (5*W))**(1/4), math.ceil(
             4.463 * W ** (1 / 4) /(eps ** (5 / 4))
         )
-        #return _plaquette_suzuki_trotter_num_simulation_circuits(eps,U,tau, L)
     elif type == "augmented plaquette":
         return _augmented_plaquette_num_simulation_circuits(eps, U, tau, L, unitary_decomp=unitary_decomp)
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
 def _augmented_plaquette_trotter_steps(t: float, eps: float, U: float, tau: float, L: int) -> int:
-    W5, W6, W7 = fourth_order_augmented_split_operator_error_coefficients(U, tau, L**2, 4)
+    #W5, W6, W7 = fourth_order_augmented_split_operator_error_coefficients(U, tau, L**2, 4, unitary_decomp=unitary_decomp)
+    W5, W6, W7 = _augmented_plaquette_error_coefficients(U, tau, L,  unitary_decomp=True)
 
-    f = lambda n: W5 * t**5 / n**4 + W6 * t**6 / n**6 + W7 * t**7 / n**6 + n * _augmented_free_fermionic_formula_error(t/n, U, tau, L) - eps
+    #f = lambda n: W5 * t**5 / n**4 + W6 * t**6 / n**6 + W7 * t**7 / n**6 + n * _augmented_free_fermionic_formula_error(t/n, U, tau, L) - eps
+    f = lambda n: W5 * t**5 / n**4 + W6 * t**6 / n**6 + W7 * t**7 / n**6 - eps
 
     x0 = W5**(1/4) * t**(5/4) /(eps**(1/4))
     res = fsolve(f, x0, full_output = True)
@@ -78,9 +80,10 @@ def _augmented_plaquette_trotter_steps(t: float, eps: float, U: float, tau: floa
     return math.ceil(root)
 
 def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: float, L: int, unitary_decomp: bool = True) -> tuple[float, int]:
-    W5, W6, W7 = fourth_order_augmented_split_operator_error_coefficients(U, tau, L**2, 4, unitary_decomp=unitary_decomp)
-
-    f = lambda t: W5 * t**5 + W6 * t**6 + W7 * t**7 + _augmented_free_fermionic_formula_error(t, U, tau, L)
+    #W5, W6, W7 = fourth_order_augmented_split_operator_error_coefficients(U, tau, L**2, 4, unitary_decomp=unitary_decomp)
+    W5, W6, W7 = _augmented_plaquette_error_coefficients(U, tau, L,  unitary_decomp=unitary_decomp)
+    #f = lambda t: W5 * t**5 + W6 * t**6 + W7 * t**7 + _augmented_free_fermionic_formula_error(t, U, tau, L)
+    f = lambda t: W5 * t**5 + W6 * t**6 + W7 * t**7
     opt_func = lambda t: 0.76*np.pi/(t*eps - f(t))
 
     t0 = (eps / (5*W5))**(1/4)
@@ -97,20 +100,142 @@ def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: floa
 
     return  min_res.x, math.ceil(Npe)
 
+def _augmented_plaquette_error_coefficients(U: float, tau: float, L: int, unitary_decomp: bool) -> tuple[float,...]:
+    WSO5, WSO6, WSO7 = fourth_order_augmented_split_operator_error_coefficients(U, tau, L**2, 4, unitary_decomp)
+    WFF5, WFF6, WFF7 = _augmented_plaquette_free_fermionic_error_coefficients(U, tau, L)
 
-def _plaquette_suzuki_trotter_steps(t: float, eps: float, U: float, tau: float, L: int) -> int:
-    ...
+    return WFF5 + WSO5, WFF6 + WSO6, WFF7 + WSO7
 
-def _plaquette_suzuki_trotter_num_simulation_circuits(eps: float, U: float, tau: float, L: int) -> int:
-    ...
+def _augmented_plaquette_free_fermionic_error_coefficients(U: float, tau: float, L: int) -> tuple[float,...]:
+    A, B, _ = plaquette_decomposition_graphs(L)
 
-def _augmented_free_fermionic_formula_error_coefficients(t: float, U: float, tau: float, L: int) -> float:
-    Gr, Gb, G = plaquette_decomposition_graphs(L)
+    a = -tau**2 / 6
+    b = tau**2 / 12
 
-    ...
+    A = tau*cast_data_to_array(A)
+    B = tau*cast_data_to_array(B)
 
-    return W5, W6, W7
+    BA = ff_commutator(B,A)
 
+    ABA = ff_commutator(
+        A, BA
+    )
+    BBA = ff_commutator(
+        B, BA
+    )
+
+    BBBA = ff_commutator(B, BBA)
+    BABA = ff_commutator(B, ABA)
+
+    AAABA = ff_commutator(A, ff_commutator(A, ABA))
+    BBABA = ff_commutator(B, ff_commutator(B, ABA))
+    BAABA = ff_commutator(B, ff_commutator(A, ABA))
+    BBBBA = ff_commutator(B, ff_commutator(B, BBA))
+
+    F1 = ABA/12 - b * B
+    F2 = BBA/24 - a * A
+
+    F12 = ff_commutator(F1, F2)
+
+    F = F1 + F2
+
+    FA = ff_commutator(F,A)
+    FB = ff_commutator(F,B)
+    FBA = ff_commutator(F, BA)
+    FFA = ff_commutator(F, ff_commutator(F, A))
+    FFB = ff_commutator(F, ff_commutator(F, B))
+    FBBA = ff_commutator(F, BBA)
+    FBBBA = ff_commutator(F, BBBA)
+
+    W5 = (
+        (3*b+a) * spectral_norm_of_free_fermionic_operator(ABA) / 20
+        +(26*b + 13 *a) * spectral_norm_of_free_fermionic_operator(BBA) / 80
+        +spectral_norm_of_free_fermionic_operator(AAABA) / 1920
+        +spectral_norm_of_free_fermionic_operator(BBABA) / 320
+        +spectral_norm_of_free_fermionic_operator(BAABA) / 480
+        +spectral_norm_of_free_fermionic_operator(BBBBA) / 384
+        +spectral_norm_of_free_fermionic_operator(FBA) / 20
+    )
+    W6 = (
+        spectral_norm_of_free_fermionic_operator(F12) / 2
+        +a*b*spectral_norm_of_free_fermionic_operator(BA)
+        +b*spectral_norm_of_free_fermionic_operator(BBBA) / 48
+        +b*spectral_norm_of_free_fermionic_operator(BABA) / 96
+        +a*spectral_norm_of_free_fermionic_operator(FA) / 4
+        +b*spectral_norm_of_free_fermionic_operator(FB) / 4
+        +spectral_norm_of_free_fermionic_operator(FBBA)/96
+    )
+    W7 = (
+        (41*a*b+27*b*b)*spectral_norm_of_free_fermionic_operator(BBA) / 224
+        +(3*a*b+a*a)*spectral_norm_of_free_fermionic_operator(ABA) / 56
+        +b*spectral_norm_of_free_fermionic_operator(BAABA) / 672
+        +b*spectral_norm_of_free_fermionic_operator(BBABA)/224
+        +b*spectral_norm_of_free_fermionic_operator(BBBBA)/224
+        +spectral_norm_of_free_fermionic_operator(FFA)/28
+        +spectral_norm_of_free_fermionic_operator(FFB)/28
+        +(3*a+b)*spectral_norm_of_free_fermionic_operator(FBA) / 28
+        +spectral_norm_of_free_fermionic_operator(FBBBA) / 672
+    )
+
+    return 2*W5, 2*W6, 2*W7 # Factor of 2 is due to spin sectors.
+
+def _fourth_order_suzuki_trotter_error_coefficient(U: float, tau: float, L: int) -> float:
+    H1, H2, _ = plaquette_decomposition_graphs(L)
+
+    hoppings = [H1, H2]
+
+    N = L**2
+    d = 2
+    res = 0
+    for term, coeff in childs_commutator_error_coeffs.items():
+        if (term[0], term[1],term[2], term[3]) == (3,3,3,3):
+            res += coeff * d * tau * U ** 4 * N
+        elif (term[0], term[1], term[3]) == (3,3,3):
+            res += coeff * 384 * d * tau * U ** 4 * N
+        elif (term[0], term[2],term[3]) == (3,3,3):
+            res += coeff * 128 * d * tau * U ** 4 * N
+        elif (term[1],term[2], term[3]) == (3,3,3):
+            res += coeff * 6 * d * tau * U ** 4 * N
+        elif (term[0],term[1], term[2]) == (3,3,3):
+            res += coeff * 128 * d * tau * U ** 4 * N
+        elif (term[0], term[3]) == (3,3):
+            res += coeff * 192 * d * tau * U ** 4 * N
+        elif (term[1], term[3]) == (3,3):
+            res += coeff * 240 * d * tau * U ** 4 * N
+        elif (term[2], term[3]) == (3,3):
+            res += coeff * 80 * d * tau * U ** 4 * N
+        elif (term[1], term[2]) == (3,3):
+            res += coeff * 128 * d * tau * U ** 4 * N
+        elif (term[0], term[2]) == (3,3):
+            res += coeff * 192 * d * tau * U ** 4 * N
+        elif (term[0], term[1]) == (3,3):
+            res += coeff * 64 * d * tau * U ** 4 * N
+        elif term[0] == 3:
+            res += coeff * 32 * d * tau * U ** 4 * N
+        elif term[1] == 3:
+            res += coeff * 48 * d * tau * U ** 4 * N
+        elif term[2] == 3:
+            res += coeff * 64 * d * tau * U ** 4 * N
+        elif term[3] == 3:
+            res += coeff * 96 * d * tau * U ** 4 * N
+
+        else:
+            operator = ff_commutator(
+                hoppings[term[0] - 1],
+                ff_commutator(
+                    hoppings[term[1] - 1],
+                    ff_commutator(
+                        hoppings[term[2] - 1],
+                        ff_commutator(
+                            hoppings[term[3] - 1],
+                            hoppings[term[4] - 1]
+                        )
+                    )
+                )
+            )
+            res += coeff * tau**5 * spectral_norm_of_free_fermionic_operator(operator)
+
+    return res
 
 def _augmented_free_fermionic_formula_error(t: float, U: float, tau: float, L: int) -> float:
     Gr, Gb, G = plaquette_decomposition_graphs(L)
@@ -292,3 +417,87 @@ def augmented_permutations(L: int) -> dict[str: list]:
     res["red_reflection"] = permutation_ref
 
     return res
+
+childs_commutator_error_coeffs = {
+    (1,1,1,2,1): 0.0047,
+    (1,1,2,2,1): 0.0057,
+    (1,1,3,2,1): 0.0057,
+    (1,2,1,2,1): 0.0046,
+    (1,2,2,2,1): 0.0074,
+    (1,2,3,2,1): 0.0082,
+    (1,3,1,2,1): 0.0046,
+    (1,3,2,2,1): 0.0070,
+    (1,3,3,2,1): 0.0082,
+    (2,1,1,2,1): 0.0150,
+    (2,1,2,2,1): 0.0161,
+    (2,1,3,2,1): 0.0161,
+    (2,2,1,2,1): 0.0239,
+    (2,2,2,2,1): 0.0315,
+    (2,2,3,2,1): 0.0303,
+    (2,3,1,2,1): 0.0179,
+    (2,3,2,2,1): 0.0232,
+    (2,3,3,2,1): 0.0259,
+    (3,1,1,2,1): 0.0204,
+    (3,1,2,2,1): 0.0225,
+    (3,1,3,2,1): 0.0225,
+    (3,2,1,2,1): 0.0423,
+    (3,2,2,2,1): 0.0585,
+    (3,2,3,2,1): 0.0502,
+    (3,3,1,2,1): 0.0423,
+    (3,3,2,2,1): 0.0681,
+    (3,3,3,2,1): 0.0648,
+    (1,1,1,3,1): 0.0047,
+    (1,1,2,3,1): 0.0057,
+    (1,1,3,3,1): 0.0057,
+    (1,2,1,3,1): 0.0046,
+    (1,2,2,3,1): 0.0070,
+    (1,2,3,3,1): 0.0082,
+    (1,3,1,3,1): 0.0046,
+    (1,3,2,3,1): 0.0058,
+    (1,3,3,3,1): 0.0074,
+    (2,1,1,3,1): 0.0150,
+    (2,1,2,3,1): 0.0161,
+    (2,1,3,3,1): 0.0161,
+    (2,2,1,3,1): 0.0239,
+    (2,2,2,3,1): 0.0306,
+    (2,2,3,3,1): 0.0303,
+    (2,3,1,3,1): 0.0179,
+    (2,3,2,3,1): 0.0206,
+    (2,3,3,3,1): 0.0241,
+    (3,1,1,3,1): 0.0204,
+    (3,1,2,3,1): 0.0225,
+    (3,1,3,3,1): 0.0225,
+    (3,2,1,3,1): 0.0423,
+    (3,2,2,3,1): 0.0571,
+    (3,2,3,3,1): 0.0502,
+    (3,3,1,3,1): 0.0423,
+    (3,3,2,3,1): 0.0641,
+    (3,3,3,3,1): 0.0621,
+    (1,1,1,3,2): 0.0043,
+    (1,1,2,3,2): 0.0057,
+    (1,1,3,3,2): 0.0057,
+    (1,2,1,3,2): 0.0035,
+    (1,2,2,3,2): 0.0062,
+    (1,2,3,3,2): 0.0082,
+    (1,3,1,3,2): 0.0035,
+    (1,3,2,3,2): 0.0046,
+    (1,3,3,3,2): 0.0074,
+    (2,1,1,3,2): 0.0141,
+    (2,1,2,3,2): 0.0161,
+    (2,1,3,3,2): 0.0161,
+    (2,2,1,3,2): 0.0212,
+    (2,2,2,3,2): 0.0290,
+    (2,2,3,3,2): 0.0303,
+    (2,3,1,3,2): 0.0153,
+    (2,3,2,3,2): 0.0179,
+    (2,3,3,3,2): 0.0241,
+    (3,1,1,3,2): 0.0186,
+    (3,1,2,3,2): 0.0217,
+    (3,1,3,3,2): 0.0225,
+    (3,2,1,3,2): 0.0377,
+    (3,2,2,3,2): 0.0537,
+    (3,2,3,3,2): 0.0502,
+    (3,3,1,3,2): 0.0377,
+    (3,3,2,3,2): 0.0601,
+    (3,3,3,3,2): 0.0628,
+}
