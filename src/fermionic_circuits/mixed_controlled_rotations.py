@@ -34,16 +34,13 @@ def mixed_control_happa_baseline(tau: float) -> QuantumCircuit:
     qc.cx(3,2)
     return qc.reverse_bits()
 
-
 def _boolean_change_of_basis() -> QuantumCircuit:
     register = QuantumRegister(4, name="sim")
     bool_qc = QuantumCircuit(register)
     bool_qc.x([1, 3])
+    bool_qc.cx(0, 1)
+    bool_qc.cx(2, 3)
     bool_qc.cx(2, 0)
-    bool_qc.cx(1, 2)
-    bool_qc.cx(3, 1)
-    bool_qc.cx(2, 0)
-    bool_qc.cx(2, 1)
     return bool_qc
 
 def _kappa_spin_change_of_basis() -> QuantumCircuit:
@@ -74,12 +71,12 @@ def spin_conjoined_mixed_control_happa_baseline(tau: float) -> QuantumCircuit:
     cob = _boolean_change_of_basis()
     qc.compose(cob, qubits = register, inplace = True)
 
-    qc.h([2,3])
-    qc.mcx([0,1,3],2, ctrl_state = 0)
-    qc.rz(2*tau,2)
-    qc.mcx([0,1,3],2, ctrl_state = 0)
-    qc.rz(-2*tau,2)
-    qc.h([2,3])
+    qc.h([0,2])
+    qc.mcx([1,2,3],0, ctrl_state = 0)
+    qc.rz(2*tau,0)
+    qc.mcx([1,2,3],0, ctrl_state = 0)
+    qc.rz(-2*tau,0)
+    qc.h([0,2])
 
     qc.compose(cob.inverse(), qubits = register, inplace = True)
     return qc.reverse_bits()
@@ -91,12 +88,12 @@ def spin_conjoined_mixed_control_kappa_baseline(tau: float) -> QuantumCircuit:
     cob = _boolean_change_of_basis()
     qc.compose(cob, qubits = register, inplace = True)
 
-    qc.h([2,3])
-    qc.mcx([0,1,3],2, ctrl_state = 0)
-    qc.ry(2*tau,2)
-    qc.mcx([0,1,3],2, ctrl_state = 0)
-    qc.ry(-2*tau,2)
-    qc.h([2,3])
+    qc.h(2)
+    qc.mcx([1,2,3],0, ctrl_state = 0)
+    qc.ry(2*tau,0)
+    qc.mcx([1,2,3],0, ctrl_state = 0)
+    qc.ry(-2*tau,0)
+    qc.h(2)
 
     qc.compose(cob.inverse(), qubits = register, inplace = True)
     return qc.reverse_bits()

@@ -59,7 +59,7 @@ class SpinSymmetricMixedControlledKappa(ResourceGate):
         self._tdg = 0
         self._t = 8
         self._toffoli = 0
-        self._cx = 26
+        self._cx = 22
 
         self._rotation_depth = 1
         self._t_depth = 3
@@ -78,7 +78,7 @@ class ControlledSpinSymmetricMixedControlledKappa(ResourceGate):
         self._tdg = 0
         self._t = 8
         self._toffoli = 0
-        self._cx = 28
+        self._cx = 24
 
         self._rotation_depth = 1
         self._t_depth = 3
@@ -92,7 +92,7 @@ class SpinSymmetricMixedControlledHappa(ResourceGate):
         self._rz = 2
         self._tdg = 0
         self._t = 8
-        self._cx = 26
+        self._cx = 22
 
         self._rotation_depth = 1
         self._t_depth = 3
@@ -109,7 +109,7 @@ class ControlledSpinSymmetricMixedControlledHappa(ResourceGate):
         self._rz = 2
         self._tdg = 0
         self._t = 8
-        self._cx = 28
+        self._cx = 24
 
         self._rotation_depth = 1
         self._t_depth = 3
