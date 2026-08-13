@@ -7,8 +7,9 @@ import networkx as nx
 
 from scipy.optimize import fsolve, minimize_scalar
 from src.hubbard_models.free_fermionic_errors import error_between_exp_of_free_fermionic
-from src.hubbard_models._free_fermionic_computations import cast_data_to_array, spectral_norm_of_free_fermionic_operator
+from src.hubbard_models._free_fermionic_computations import cast_data_to_array, spectral_norm_of_free_fermionic_operator, ff_commutator
 from src.hubbard_models.split_operator_error_coefficients import fourth_order_augmented_split_operator_error_coefficients, fourth_order_suzuki_trotter_split_operator_error_coefficient
+from src.bch_formula.commutator_bound import fourth_order_suzuki_trotter_commutator_bound
 
 def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, Lx: int, Ly: int, type: str) -> int:
     if type == "tile":
@@ -17,8 +18,7 @@ def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, 
             np.sqrt(W / eps) * t**(3/2)
         )
     elif type == "tile 4th":
-        W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, 2*Lx*Ly,3)
-        #W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, L)
+        W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, Lx, Ly)
         return math.ceil(
             (W / eps)**(1/4) * t**(5/4)
         )
@@ -34,8 +34,7 @@ def compute_evolution_time_and_number_of_simulation_circuits_for_qpe(eps: float,
             6.203 * W**(1/2) / (eps**(3/2))
         )
     elif type == "tile 4th":
-        W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, 2*Lx*Ly, 3)
-       # W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, L)
+        W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, Lx, Ly)
         return (eps / (5*W))**(1/4), math.ceil(
             4.463 * W ** (1 / 4) /(eps ** (5 / 4))
         )
@@ -45,7 +44,7 @@ def compute_evolution_time_and_number_of_simulation_circuits_for_qpe(eps: float,
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
 def second_order_error_coefficient(U: float, tau: float, Lx: int, Ly: int) -> float:
-    _, _, _, G = s3_tile_trotterization_graphs(Lx, Ly)
+    _, _, _, G = tile_trotterization_hexagonal(Lx, Ly)
     R1 = 2*spectral_norm_of_free_fermionic_operator(G)
 
     return U*U*tau * R1 / 24 + 9.9*U*tau**2 * (2*Lx*Ly) / 12 + 0.8532 * tau**3 * (2*Lx*Ly)
@@ -81,135 +80,306 @@ def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: floa
 
     return  min_res.x, math.ceil(Npe)
 
-def s3_tile_trotterization_graphs(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
-    if (Ly % 2):
-        raise ValueError(f"Only even values of Ly are allowed, got: {Ly}")
-    whole = nx.hexagonal_lattice_graph(Lx, Ly, periodic=True)
-    pos = nx.get_node_attributes(whole, 'pos')
+def tile_trotterization_hexagonal(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
+    if  (Lx % 2) or (Ly % 2):
+        raise ValueError(f"Lx and Ly must be even, got: Lx = {Lx}, Ly = {Ly}")
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2 * Lx, periodic=True, with_positions=True)
+
+    lx, ly = 2 * Lx, 2 * Ly
 
     Gr, Gb, Gy = nx.Graph(), nx.Graph(), nx.Graph()
     for g in [Gr, Gb, Gy]:
         g.add_nodes_from(whole.nodes)
-        for node, p in pos.items():
-            g.nodes[node]['pos'] = p
 
-    edge_groups = [[], [], []]
-
-    for i in range(Ly + 1):
-        d = i % 2
-        for j in range(Lx + 2):
-            x = i
-            y = 2 * j + (i + 1) % 2
-            edge_groups[d].extend([
-                ((x, y), (x, (y + 1) % (2 * Lx))),
-                ((x, y), (x, (y - 1) % (2 * Lx))),
-                ((x, y), ((x - 1) % Ly, y))
+    for j in range(lx):
+        for i in range(Ly // 2):
+            x = j % lx
+            d = (x + 1) % 4
+            y = (4 * i + d) % ly
+            Gr.add_edges_from([
+                ((x, y), (x, (y + 1) % ly)),
+                ((x, y), (x, (y - 1) % ly))
             ])
-            d = (d + 1) % 3
 
-    Gr.add_edges_from([x for x in edge_groups[0] if (x[0] in whole.nodes) and (x[1] in whole.nodes)])
-    Gb.add_edges_from([x for x in edge_groups[1] if (x[0] in whole.nodes) and (x[1] in whole.nodes)])
-    Gy.add_edges_from([x for x in edge_groups[2] if (x[0] in whole.nodes) and (x[1] in whole.nodes)])
+    for j in range(Lx):
+        for i in range(Ly // 2):
+            x = (2 * j) % lx
+            d = (x + 3) % 4
+            y = (4 * i + d) % ly
+            Gb.add_edges_from([
+                ((x, y), (x, (y + 1) % ly)),
+                ((x, y), ((x - 1) % lx, y))
+            ])
+            x = (2 * j - 1) % lx
+            d = (x + 2) % 4
+            y = (4 * i + d) % ly
+            Gb.add_edges_from([
+                ((x, y), (x, (y + 1) % ly)),
+                ((x, y), ((x + 1) % lx, y))
+            ])
+
+    for j in range(Lx):
+        for i in range(Ly // 2):
+            x = (2 * j) % lx
+            d = (x + 2) % 4
+            y = (4 * i + d) % ly
+            Gy.add_edges_from([
+                ((x, y), (x, (y + 1) % ly)),
+                ((x, y), ((x + 1) % lx, y))
+            ])
+            x = (2 * j + 1) % lx
+            d = (2 * j) % 4
+            y = (4 * i + d) % ly
+            Gy.add_edges_from([
+                ((x, y), (x, (y + 1) % ly)),
+                ((x, y), ((x - 1) % lx, y))
+            ])
+
     return Gr, Gb, Gy, whole
 
-def hexagonal_3_correctors(Lx: int, Ly: int) -> tuple[nx.DiGraph, ...]:
-    if (Ly % 2):
-        raise ValueError(f"Only even values of Ly are allowed, got: {Ly}")
-    whole = nx.hexagonal_lattice_graph(Lx, Ly, periodic=True)
-    pos = nx.get_node_attributes(whole, 'pos')
+def colored_hexagonal_trotterization(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2*Lx, periodic=True, with_positions=True)
 
-    Gbr, Gyr, Gyb = nx.DiGraph(), nx.DiGraph(), nx.DiGraph()
-    for g in [Gbr, Gyr, Gyb]:
+    lx, ly = 2*Lx, 2*Ly
+
+    Gr, Gb, Gy = nx.Graph(), nx.Graph(), nx.Graph()
+    for g in [Gr, Gb, Gy]:
         g.add_nodes_from(whole.nodes)
-        for node, p in pos.items():
-            g.nodes[node]['pos'] = p
 
-    edge_groups = [[], [], []]
+    for i in range(ly):
+        for j in range(Lx):
+            x = 2 * j + (i % 2)
+            y = i
+            Gr.add_edge(
+                    (x,y),((x+1) % lx, y % ly)
+            )
 
-    for i in range(Ly + 1):
-        d = i % 2
-        for j in range(Lx + 2):
-            x = i
-            y = 2 * j + (i + 1) % 2
-            edge_groups[d].extend([
-                ((x, (y + 2) % (2 * Lx)), (x, y)),
-                (((x + 1) % Ly, (y - 1) % (2 * Lx)), (x, y)),
-                (((x - 1) % Ly, (y - 1) % (2 * Lx)), (x, y))
-            ])
-            d = (d + 1) % 3
+            Gb.add_edge(
+                    (x,y),(x % lx, (y+1) % ly)
+            )
 
-    Gbr.add_edges_from([x for x in edge_groups[0] if (x[0] in whole.nodes) and (x[1] in whole.nodes)])
-    Gyr.add_edges_from([x[::-1] for x in edge_groups[2] if (x[0] in whole.nodes) and (x[1] in whole.nodes)])
-    Gyb.add_edges_from([x for x in edge_groups[1] if (x[0] in whole.nodes) and (x[1] in whole.nodes)])
-    return Gbr, Gyr, Gyb
+            Gy.add_edge(
+                    (x,y),(x % lx, (y-1) % ly)
+            )
 
-def hexagonal_3_correctors_decomposed(Lx: int, Ly: int) -> tuple[list[nx.DiGraph, ...], ...]:
-    if (Ly % 2):
-        raise ValueError(f"Only even values of Ly are allowed, got: {Ly}")
-    whole = nx.hexagonal_lattice_graph(Lx, Ly, periodic=True)
-    pos = nx.get_node_attributes(whole, 'pos')
+    return Gr, Gb, Gy, whole
 
-    Gbr, Gyr, Gyb = [nx.DiGraph(), nx.DiGraph(), nx.DiGraph()], [nx.DiGraph(), nx.DiGraph(), nx.DiGraph()],[nx.DiGraph(), nx.DiGraph(), nx.DiGraph()]
-    for g in Gbr + Gyr + Gyb:
-        g.add_nodes_from(whole.nodes)
-        for node, p in pos.items():
-            g.nodes[node]['pos'] = p
+def _fourth_order_suzuki_trotter_error_coefficient(U: float, tau: float, Lx: int, Ly: int) -> float:
 
-    edge_groups = [[[], [], []], [[],[],[]], [[],[],[]]]
+    # This bound is likely loose due to the non-uniformity of the hopping decomposition
 
-    for i in range(Ly + 1):
-        d = i % 2
-        for j in range(Lx + 2):
-            x = i
-            y = 2 * j + (i + 1) % 2
-            edge_groups[(i + d) % 3][d].extend([
-                ((x, (y + 2) % (2 * Lx)), (x, y)),
-                (((x + 1) % Ly, (y - 1) % (2 * Lx)), (x, y)),
-                (((x - 1) % Ly, (y - 1) % (2 * Lx)), (x, y))
-            ])
-            d = (d + 1) % 3
+    four_terms = fourth_order_suzuki_trotter_commutator_bound(4)
+    H1, H2, H3, _ = tile_trotterization_hexagonal(Lx,Ly)
+    hoppings = [H1, H2, H3]
+    N = 2*Lx*Ly
+    d = 2
+    res = 0
+    for term, coeff in four_terms.items():
+        if (term[0], term[1],term[2], term[3]) == (4,4,4,4):
+            res += coeff * d * tau * U ** 4 * N
+        elif (term[0], term[1], term[3]) == (4,4,4):
+            res += coeff * 384 * d * tau * U ** 4 * N
+        elif (term[0], term[2],term[3]) == (4,4,4):
+            res += coeff * 128 * d * tau * U ** 4 * N
+        elif (term[1],term[2], term[3]) == (4,4,4):
+            res += coeff * 6 * d * tau * U ** 4 * N
+        elif (term[0],term[1], term[2]) == (4,4,4):
+            res += coeff * 128 * d * tau * U ** 4 * N
+        elif (term[0], term[3]) == (4,4):
+            res += coeff * 192 * d * tau * U ** 4 * N
+        elif (term[1], term[3]) == (4,4):
+            res += coeff * 240 * d * tau * U ** 4 * N
+        elif (term[2], term[3]) == (4,4):
+            res += coeff * 80 * d * tau * U ** 4 * N
+        elif (term[1], term[2]) == (4,4):
+            res += coeff * 128 * d * tau * U ** 4 * N
+        elif (term[0], term[2]) == (4,4):
+            res += coeff * 192 * d * tau * U ** 4 * N
+        elif (term[0], term[1]) == (4,4):
+            res += coeff * 64 * d * tau * U ** 4 * N
+        elif term[0] == 4:
+            res += coeff * 32 * d * tau * U ** 4 * N
+        elif term[1] == 4:
+            res += coeff * 48 * d * tau * U ** 4 * N
+        elif term[2] == 4:
+            res += coeff * 64 * d * tau * U ** 4 * N
+        elif term[3] == 4:
+            res += coeff * 96 * d * tau * U ** 4 * N
 
-    for i in range(3):
-        Gbr[i].add_edges_from([x for x in edge_groups[i][0] if (x[0] in whole.nodes) and (x[1] in whole.nodes)])
-        Gyr[i].add_edges_from([x[::-1] for x in edge_groups[i][2] if (x[0] in whole.nodes) and (x[1] in whole.nodes)])
-        Gyb[i].add_edges_from([x for x in edge_groups[i][1] if (x[0] in whole.nodes) and (x[1] in whole.nodes)])
-    return Gbr, Gyr, Gyb
+        else:
+            operator = ff_commutator(
+                hoppings[term[0] - 1],
+                ff_commutator(
+                    hoppings[term[1] - 1],
+                    ff_commutator(
+                        hoppings[term[2] - 1],
+                        ff_commutator(
+                            hoppings[term[3] - 1],
+                            hoppings[term[4] - 1]
+                        )
+                    )
+                )
+            )
+            res += coeff * tau**5 * spectral_norm_of_free_fermionic_operator(operator)
+
+    return res
+
+"""
+Augmented free fermionic:
+"""
+
+def rbr(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2 * Lx, periodic=True, with_positions=True)
+
+    lx, ly = 2 * Lx, 2 * Ly
+
+    res = nx.Graph()
+    res.add_nodes_from(whole.nodes)
+
+    for i in range(ly):
+        for j in range(Lx):
+            x = 2 * j + (i % 2)
+            y = i
+            res.add_edge(
+                (x, y), ((x + 2) % lx, (y - 1) % ly), weight=2 / 24
+            )
+
+    return res
+
+def ryr(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2 * Lx, periodic=True, with_positions=True)
+
+    lx, ly = 2 * Lx, 2 * Ly
+
+    res = nx.Graph()
+    res.add_nodes_from(whole.nodes)
+
+    for i in range(ly):
+        for j in range(Lx):
+            x = 2 * j + (i % 2)
+            y = i
+            res.add_edge(
+                (x, y), ((x + 2) % lx, (y + 1) % ly), weight=2 / 24
+            )
+
+    return res
+
+
+def byb(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2 * Lx, periodic=True, with_positions=True)
+
+    lx, ly = 2 * Lx, 2 * Ly
+
+    res = nx.Graph()
+    res.add_nodes_from(whole.nodes)
+
+    for i in range(ly):
+        for j in range(Lx):
+            x = 2 * j + (i % 2)
+            y = i
+            res.add_edge(
+                (x, y), (x, (y + 3) % ly), weight=2 / 24
+            )
+
+    return res
+
+
+def bbr(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2 * Lx, periodic=True, with_positions=True)
+
+    lx, ly = 2 * Lx, 2 * Ly
+
+    res = nx.Graph()
+    res.add_nodes_from(whole.nodes)
+
+    for i in range(ly):
+        for j in range(Lx):
+            x = 2 * j + (i % 2)
+            y = i
+            res.add_edge(
+                (x, y), ((x - 1) % lx, (y + 2) % ly), weight=-2 / 12
+            )
+
+    return res
+
+def yyr(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2 * Lx, periodic=True, with_positions=True)
+
+    lx, ly = 2 * Lx, 2 * Ly
+
+    res = nx.Graph()
+    res.add_nodes_from(whole.nodes)
+
+    for i in range(ly):
+        for j in range(Lx):
+            x = 2 * j + (i % 2)
+            y = i
+            res.add_edge(
+                (x, y), ((x - 1) % lx, (y - 2) % ly), weight=-2 / 12
+            )
+
+    return res
+
+
+def yyb(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2 * Lx, periodic=True, with_positions=True)
+
+    lx, ly = 2 * Lx, 2 * Ly
+
+    res = nx.Graph()
+    res.add_nodes_from(whole.nodes)
+
+    for i in range(ly):
+        for j in range(Lx):
+            x = 2 * j + (i % 2)
+            y = i
+            res.add_edge(
+                (x, y), (x, (y - 3) % ly), weight=-2 / 12
+            )
+
+    return res
+
+
+def triple_mixed_graphs(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2 * Lx, periodic=True, with_positions=True)
+
+    lx, ly = 2 * Lx, 2 * Ly
+
+    res1, res2, res3 = nx.Graph(), nx.Graph(), nx.Graph()
+    for res in [res1, res2, res3]:
+        res.add_nodes_from(whole.nodes)
+
+    for i in range(ly):
+        for j in range(Lx):
+            x = 2 * j + (i % 2)
+            y = i
+            res1.add_edge(
+                (x, y), ((x + 1) % lx, (y - 2) % ly), weight=2 / 12
+            )
+            res2.add_edge(
+                (x, y), ((x + 1) % lx, (y + 2) % ly), weight=2 / 12
+            )
+            res3.add_edge(
+                (x, y), ((x - 1) % lx, y), weight=-4 / 12
+            )
+
+    return res1, res2, res3
+
+def color_correctors(Lx, Ly) -> tuple[list[float], list[nx.Graph]]:
+    _corr = [c(Lx, Ly) for c in [rbr, ryr, byb, bbr, yyr, yyb]] + list(triple_mixed_graphs(Lx, Ly))
+    return [1/3,1/12,-1/6], _corr
 
 def _compute_augmented_trotter_error_numerically(t: float, tau: float, Lx: int, Ly: int) -> float:
-    _Gr, _Gb, _Gy, _whole = s3_tile_trotterization_graphs(Lx, Ly)
-    _Gbr,_Gyr,_Gyb = hexagonal_3_correctors_decomposed(Lx, Ly)
-
-    Gr, Gb, Gy, whole = cast_data_to_array(_Gr), cast_data_to_array(_Gb), cast_data_to_array(_Gy), cast_data_to_array(_whole)
-    Gbr = [
-        -(t*tau)**2 * cast_data_to_array(g) / 24 for g in _Gbr
+    Gr, Gb, Gy, G = colored_hexagonal_trotterization(Lx, Ly)
+    Gs = [Gr, Gb, Gy]
+    coeffs, correctors = color_correctors(Lx, Ly)
+    seq1 = [
+        1j*(tau*t)*0.5*(1+c*(tau*t)**2)*cast_data_to_array(g) for c,g in zip(coeffs, Gs)
     ]
-    Gyr = [
-        -(t*tau)**2 * cast_data_to_array(g) / 24 for g in _Gyr
-    ]
-    Gyb = [
-        -(t*tau)**2 * cast_data_to_array(g) / 24 for g in _Gyb
-    ]
-    MGbr, MGyr, MGyb = [-g for g in Gbr[::-1]],[-g for g in Gyr[::-1]],[-g for g in Gyb[::-1]],
-
-    sequence = [
-        *Gbr,
-        *Gyr,
-        1j*(t*tau)*(1/2)*Gr,
-        *Gyr,
-        *Gbr,
-        *Gyb,
-        1j*(tau)*t*(1/2)*Gb,
-        *Gyb,
-        1j*(t*tau)*Gy,
-        *MGyb,
-        1j*(t*tau)*(1/2)*Gb,
-        *MGyb,
-        *MGbr,
-        *MGyr,
-        1j*(t*tau)*(1/2)*Gr,
-        *MGyr,
-        *MGbr
+    seq2 = [
+        1j * (tau*t) ** 3 * cast_data_to_array(g) for g in correctors
     ]
 
-    target = 1j*t*tau*whole
-    return error_between_exp_of_free_fermionic(sequence, target)
+    seq = seq1 + seq2 + seq1[::-1]
+    target = 1j*(tau*t)*cast_data_to_array(G)
+    return error_between_exp_of_free_fermionic(seq, target)

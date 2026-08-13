@@ -154,31 +154,31 @@ def get_qpe_gate_set(type: str, Lx: int, Ly: int, hwp: bool) -> tuple[dict[Resou
             if hwp:
                 trotter_step_gates = {
                     HWPGate(
-                        {FreeFermionicS3Tile(): N // 3},
+                        {FreeFermionicS1Tile(): N},
                         N
-                    ): 17,
+                    ): 15,
                     HWPGate({ShiftedOccupationPair(): N}, N): 2,
                     HWPGate({SpinSymmetricMixedControlledHappa(): N // 2}, N // 2): 3,
                 }
                 unitary_gates = {
                     HWPGate(
-                        {FreeFermionicS3Tile(): N // 3},
+                        {FreeFermionicS1Tile(): N},
                         N
-                    ): 17,
+                    ): 15,
                     HWPGate({SpinSymmetricMixedControlledKappa(): N // 2}, N // 2): 3,
                 }
             else:
                 trotter_step_gates = {
                     ParallelizedResourceGate(
-                        {FreeFermionicS3Tile(): N // 3}
-                    ): 17,
+                        {FreeFermionicS1Tile(): N}
+                    ): 15,
                     ParallelizedResourceGate({ShiftedOccupationPair(): N}): 2,
                     ParallelizedResourceGate({SpinSymmetricMixedControlledHappa(): N // 2}): 3,
                 }
                 unitary_gates = {
                     ParallelizedResourceGate(
-                        {FreeFermionicS3Tile(): N // 3}
-                    ): 17,
+                        {FreeFermionicS1Tile(): N}
+                    ): 15,
                     ParallelizedResourceGate({SpinSymmetricMixedControlledKappa(): N // 2}): 3,
                 }
         case _:
