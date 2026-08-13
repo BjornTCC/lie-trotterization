@@ -155,17 +155,17 @@ def get_qpe_gate_set(type: str, Lx: int, Ly: int, hwp: bool) -> tuple[dict[Resou
                 trotter_step_gates = {
                     HWPGate(
                         {FreeFermionicS1Tile(): N},
-                        N
+                        2*N
                     ): 15,
                     HWPGate({ShiftedOccupationPair(): N}, N): 2,
-                    HWPGate({SpinSymmetricMixedControlledHappa(): N // 2}, N // 2): 3,
+                    HWPGate({SpinSymmetricMixedControlledHappa(): N // 2}, N): 3,
                 }
                 unitary_gates = {
                     HWPGate(
                         {FreeFermionicS1Tile(): N},
-                        N
+                        2*N
                     ): 15,
-                    HWPGate({SpinSymmetricMixedControlledKappa(): N // 2}, N // 2): 3,
+                    HWPGate({SpinSymmetricMixedControlledKappa(): N // 2}, N): 3,
                 }
             else:
                 trotter_step_gates = {
@@ -173,13 +173,13 @@ def get_qpe_gate_set(type: str, Lx: int, Ly: int, hwp: bool) -> tuple[dict[Resou
                         {FreeFermionicS1Tile(): N}
                     ): 15,
                     ParallelizedResourceGate({ShiftedOccupationPair(): N}): 2,
-                    ParallelizedResourceGate({SpinSymmetricMixedControlledHappa(): N // 2}): 3,
+                    ParallelizedResourceGate({SpinSymmetricMixedControlledHappa(): N}): 3,
                 }
                 unitary_gates = {
                     ParallelizedResourceGate(
                         {FreeFermionicS1Tile(): N}
                     ): 15,
-                    ParallelizedResourceGate({SpinSymmetricMixedControlledKappa(): N // 2}): 3,
+                    ParallelizedResourceGate({SpinSymmetricMixedControlledKappa(): N}): 3,
                 }
         case _:
             raise ValueError(f"Unrecognized time evolution algorithm: {type}")
