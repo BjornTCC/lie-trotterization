@@ -54,6 +54,19 @@ def fourth_order_suzuki_trotter_split_operator_error_coefficient(U: float, tau: 
         0.0047*U**3 + 1.3766*d*tau*U**2 + 3.5808*d**2*tau**2*U + 2.7264 * d**3*tau**3,
     )
 
+def fourth_order_suzuki_trotter_split_operator_error_coefficient_square(U: float, tau: float, L: int) -> float:
+    return tau * U * L**2 * min(
+        0.0696 * U ** 3 + 0.3935 * tau * U ** 2 + 7.623 * tau ** 2 * U + 30.6 * tau ** 3,
+        0.0116 * U ** 3 + 0.3073 * tau * U ** 2 + 10.2 * tau ** 2 * U + 184.9 * tau ** 3,
+    )
+
+def fourth_order_suzuki_trotter_split_operator_error_coefficient_cubic(U: float, tau: float, L: int) -> float:
+    return tau * U * L**3 * min(
+        0.0804*U**3 + 0.783*tau*U**2 + 31.92*tau**2*U + 176.76 *tau**3,
+        0.0133*U**3 + 0.5766*tau*U**2 + 44.86*tau**2*U + 1068.1 *tau**3,
+    )
+
+
 def fourth_order_augmented_split_operator_error_coefficients(U: float, tau: float, N: int, d: int, unitary_decomp: bool = True) -> tuple[float, float, float]:
     Wso = (1 / 120 * U**3 + 9091 / 2880 * d*tau*U**2 + 257 / 90 * d**2 * tau**2 * U + 3 / 5 * d**3 * tau**3) * d*tau*U*N
     WH2H1 = (5 / 72 * (d**3 + d**2) * tau + 1 / 12 * d * tau + (5*d + 1) / 144 * U)*d*tau**2*U**2*N
@@ -62,3 +75,26 @@ def fourth_order_augmented_split_operator_error_coefficients(U: float, tau: floa
     if unitary_decomp:
         return Wso + WH2H1, WH2H2H1, WSO7
     return Wso, WH2H2H1, WSO7
+
+
+def square_augmented_so_coeffs(U: float, tau: float, L: int, unitary_decomp: bool = True) -> tuple[float]:
+    d = 4
+    N = L**2
+    WH2H1 = (5 / 72 * (d**3 + d**2) * tau + 1 / 12 * d * tau + (5*d + 1) / 144 * U)*d*tau**2*U**2*N
+    WSO5 = (0.02042*U**3 + 0.209*tau*U**2 + 8.048 * tau**2 *U + 40.691*tau**3)*tau*U*N
+    WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
+    WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
+    if unitary_decomp:
+        return WSO5 + WH2H1, WH2H2H1, WSO7
+    return WSO5, WH2H2H1, WSO7
+
+def cubic_augmented_so_coeffs(U: float, tau: float, L: int, unitary_decomp: bool = True) -> tuple[float]:
+    d = 6
+    N = L**3
+    WH2H1 = (5 / 72 * (d**3 + d**2) * tau + 1 / 12 * d * tau + (5*d + 1) / 144 * U)*d*tau**2*U**2*N
+    WSO5 = (0.0236*U**3 + 0.449*tau*U**2 + 32.4 * tau**2 *U + 235.042*tau**3)*tau*U*N
+    WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
+    WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
+    if unitary_decomp:
+        return WSO5 + WH2H1, WH2H2H1, WSO7
+    return WSO5, WH2H2H1, WSO7

@@ -22,7 +22,8 @@ from src.hubbard_models._free_fermionic_computations import spectral_norm_of_fre
 from src.hubbard_models.split_operator_error_coefficients import (
     plaquette_second_order_split_operator_error_coefficient,
     fourth_order_suzuki_trotter_split_operator_error_coefficient,
-    fourth_order_augmented_split_operator_error_coefficients
+    fourth_order_augmented_split_operator_error_coefficients,
+    square_augmented_so_coeffs
 )
 from src.hubbard_models.free_fermionic_errors import error_between_exp_of_free_fermionic
 
@@ -34,12 +35,11 @@ def get_fermionic_operator(U: float, tau: float, L: int) -> FermionOperator:
 
 def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, L: int, type: str) -> int:
     if type == "plaquette":
-        W = second_order_error_coefficient(U, tau, L)
+        W = second_order_error_coefficient_alt(U, tau, L)
         return math.ceil(
             np.sqrt(W / eps) * t**(3/2)
         )
     elif type == "plaquette suzuki-trotter":
-        #W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L**2,4)
         W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, L)
         return math.ceil(
             (W / eps)**(1/4) * t**(5/4)
@@ -51,12 +51,11 @@ def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, 
 
 def compute_evolution_time_and_number_of_simulation_circuits_for_qpe(eps: float, U: float, tau: float, L: int, type: str, unitary_decomp: bool = True) -> tuple[float,int]:
     if type == "plaquette":
-        W = second_order_error_coefficient(U, tau, L)
+        W = second_order_error_coefficient_alt(U, tau, L)
         return np.sqrt(eps / (3*W)), math.ceil(
             6.203 * W**(1/2) / (eps**(3/2))
         )
     elif type == "plaquette suzuki-trotter":
-        #W = fourth_order_suzuki_trotter_split_operator_error_coefficient(U, tau, L**2, 4)
         W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, L)
         return (eps / (5*W))**(1/4), math.ceil(
             4.463 * W ** (1 / 4) /(eps ** (5 / 4))
@@ -101,12 +100,83 @@ def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: floa
     return  min_res.x, math.ceil(Npe)
 
 def _augmented_plaquette_error_coefficients(U: float, tau: float, L: int, unitary_decomp: bool) -> tuple[float,...]:
-    WSO5, WSO6, WSO7 = fourth_order_augmented_split_operator_error_coefficients(U, tau, L**2, 4, unitary_decomp)
-    WFF5, WFF6, WFF7 = _augmented_plaquette_free_fermionic_error_coefficients(U, tau, L)
+    #WSO5, WSO6, WSO7 = fourth_order_augmented_split_operator_error_coefficients(U, tau, L**2, 4, unitary_decomp)
+    WSO5, WSO6, WSO7 = square_augmented_so_coeffs(U, tau, L,  unitary_decomp)
+    WFF5, WFF6, WFF7 = _augmented_plaquette_free_fermionic_error_coefficients(tau, L)
 
-    return WFF5 + WSO5, WFF6 + WSO6, WFF7 + WSO7
+    return WFF5/(2**4) + WSO5, WFF6/(2**5) + WSO6, WFF7 / (2**6) + WSO7
 
-def _augmented_plaquette_free_fermionic_error_coefficients(U: float, tau: float, L: int) -> tuple[float,...]:
+def _augmented_plaquette_free_fermionic_error_coefficients(tau: float, L: int) -> tuple[float,...]:
+    A, B, H = plaquette_decomposition_graphs(L)
+    (a,b), (F1, F2) = plaquette_correctors(L)
+
+    a *= tau**2
+    b *= tau**2
+
+    A = tau*cast_data_to_array(A)
+    B = tau*cast_data_to_array(B)
+    H = tau * cast_data_to_array(H)
+    F1 = tau**3 * cast_data_to_array(F1)
+    F2 = tau**3 * cast_data_to_array(F2)
+
+    F = F1 + F2
+
+    F12 = ff_commutator(F1, F2)
+
+    BA = ff_commutator(B,A)
+
+    ABA = ff_commutator(
+        A, BA
+    )
+    BBA = ff_commutator(
+        B, BA
+    )
+
+    HAB = ff_commutator(H, BA)
+    HHAB = ff_commutator(H, HAB)
+
+    BBBA = ff_commutator(B, BBA)
+    BABA = ff_commutator(B, ABA)
+
+    AAABA = ff_commutator(A, ff_commutator(A, ABA))
+
+    HHHHA = ff_commutator(H, HHAB)
+    HHHHB = HHHHA
+    HAAAB = ff_commutator(H, ff_commutator(A, ABA))
+    HHAAB = ff_commutator(H, ff_commutator(H, ABA))
+    HHHAB = HHHHA
+
+    BF = ff_commutator(B, F)
+    BBF = ff_commutator(B, BF)
+    ABF = ff_commutator(A, BF)
+    AAF = ff_commutator(A, ff_commutator(A,F))
+
+    W5 = (
+        spectral_norm_of_free_fermionic_operator(AAABA) / 960
+        + spectral_norm_of_free_fermionic_operator(HHHHA) / 1920
+        + spectral_norm_of_free_fermionic_operator(HHHHB) / 240
+        + spectral_norm_of_free_fermionic_operator(HAAAB) / 240
+        + spectral_norm_of_free_fermionic_operator(HHAAB) / 160
+        + spectral_norm_of_free_fermionic_operator(HHHAB) / 120
+        + 3*b * spectral_norm_of_free_fermionic_operator(ABA) / 40
+        + 3*(a+2*b) * spectral_norm_of_free_fermionic_operator(HAB) / 20
+        + 3* spectral_norm_of_free_fermionic_operator(BBF) / 40
+        + 3* spectral_norm_of_free_fermionic_operator(ABF) / 20
+        + 3* spectral_norm_of_free_fermionic_operator(AAF) / 40
+    )
+    W6 = (
+        a*b* spectral_norm_of_free_fermionic_operator(BA) // 8
+        + b * spectral_norm_of_free_fermionic_operator(BF) / 4
+        + spectral_norm_of_free_fermionic_operator(F12) / (12*24*2)
+    )
+    W7 = (
+        3*a*spectral_norm_of_free_fermionic_operator(AAF) / 14
+        + 3* a * spectral_norm_of_free_fermionic_operator(ABF) / 14
+        + a*a*spectral_norm_of_free_fermionic_operator(ABA) / 28
+    )
+
+    return 2*W5, 2*W6, 2*W7 # Factor of 2 is due to spin sectors.
+def __augmented_plaquette_free_fermionic_error_coefficients(U: float, tau: float, L: int) -> tuple[float,...]:
     A, B, _ = plaquette_decomposition_graphs(L)
 
     a = -tau**2 / 6
@@ -180,62 +250,9 @@ def _augmented_plaquette_free_fermionic_error_coefficients(U: float, tau: float,
     return 2*W5, 2*W6, 2*W7 # Factor of 2 is due to spin sectors.
 
 def _fourth_order_suzuki_trotter_error_coefficient(U: float, tau: float, L: int) -> float:
-    H1, H2, _ = plaquette_decomposition_graphs(L)
-
-    hoppings = [H1, H2]
-
-    N = L**2
-    d = 2
-    res = 0
-    for term, coeff in childs_commutator_error_coeffs.items():
-        if (term[0], term[1],term[2], term[3]) == (3,3,3,3):
-            res += coeff * d * tau * U ** 4 * N
-        elif (term[0], term[1], term[3]) == (3,3,3):
-            res += coeff * 384 * d * tau * U ** 4 * N
-        elif (term[0], term[2],term[3]) == (3,3,3):
-            res += coeff * 128 * d * tau * U ** 4 * N
-        elif (term[1],term[2], term[3]) == (3,3,3):
-            res += coeff * 6 * d * tau * U ** 4 * N
-        elif (term[0],term[1], term[2]) == (3,3,3):
-            res += coeff * 128 * d * tau * U ** 4 * N
-        elif (term[0], term[3]) == (3,3):
-            res += coeff * 192 * d * tau * U ** 4 * N
-        elif (term[1], term[3]) == (3,3):
-            res += coeff * 240 * d * tau * U ** 4 * N
-        elif (term[2], term[3]) == (3,3):
-            res += coeff * 80 * d * tau * U ** 4 * N
-        elif (term[1], term[2]) == (3,3):
-            res += coeff * 128 * d * tau * U ** 4 * N
-        elif (term[0], term[2]) == (3,3):
-            res += coeff * 192 * d * tau * U ** 4 * N
-        elif (term[0], term[1]) == (3,3):
-            res += coeff * 64 * d * tau * U ** 4 * N
-        elif term[0] == 3:
-            res += coeff * 32 * d * tau * U ** 4 * N
-        elif term[1] == 3:
-            res += coeff * 48 * d * tau * U ** 4 * N
-        elif term[2] == 3:
-            res += coeff * 64 * d * tau * U ** 4 * N
-        elif term[3] == 3:
-            res += coeff * 96 * d * tau * U ** 4 * N
-
-        else:
-            operator = ff_commutator(
-                hoppings[term[0] - 1],
-                ff_commutator(
-                    hoppings[term[1] - 1],
-                    ff_commutator(
-                        hoppings[term[2] - 1],
-                        ff_commutator(
-                            hoppings[term[3] - 1],
-                            hoppings[term[4] - 1]
-                        )
-                    )
-                )
-            )
-            res += coeff * tau**5 * spectral_norm_of_free_fermionic_operator(operator)
-
-    return res
+    # From:https://journals.aps.org/prb/abstract/10.1103/PhysRevB.108.195105
+    return L*L * (2.1485 * tau**5 + 92.1642 * tau**4 * U + 14.3445 * tau**3 * U**2
+                   + 1.0712 * tau**2 * U**3 + 0.07938 * tau*U**4)
 
 def _augmented_free_fermionic_formula_error(t: float, U: float, tau: float, L: int) -> float:
     Gr, Gb, G = plaquette_decomposition_graphs(L)
@@ -257,6 +274,11 @@ def _augmented_free_fermionic_formula_error(t: float, U: float, tau: float, L: i
     seq = [Mat_Gr, Mat_Gb, Mat_Cr, Mat_Cb, Mat_Gb, Mat_Gr]
 
     return 2*error_between_exp_of_free_fermionic(seq, Mat_G)
+
+
+def second_order_error_coefficient_alt(U: float, tau: float, L: int) -> float:
+    # From: https://journals.aps.org/prb/abstract/10.1103/PhysRevB.108.195105
+    return L*L * (4.4142 * tau**3 + 8.0889 * tau**2 * U + 1.3062 * tau* U**2)
 
 def second_order_error_coefficient(U: float, tau: float, L: int) -> float:
     G_red, G_blue, G = plaquette_decomposition_graphs(L)
@@ -297,6 +319,38 @@ def plaquette_decomposition_graphs(L: int) -> tuple[nx.Graph, nx.Graph, nx.Graph
                 ])
 
     return red, blue, whole
+
+def plaquette_correctors(L: int) -> tuple[tuple[float], tuple[nx.Graph, ...]]:
+    assert not (L % 2)
+    m,n = L,L
+    red, blue = nx.Graph(), nx.Graph()
+
+    whole = nx.grid_2d_graph(m, n, periodic=True)
+
+    nodes = [(i, j) for i in range(m) for j in range(n)]
+
+    for g in [red, blue]:
+        g.add_nodes_from(nodes)
+
+    for i in range(m):
+        for j in range(n):
+            if ((i + 1) % 2) and ((j + 1) % 2):
+                red.add_edges_from([
+                    (((i - 1) % m, (j - 1) % n), ((i + 2) % m, (j - 1) % n)),
+                    (((i - 1) % m, (j - 1) % n), ((i - 1) % m, (j + 2) % n)),
+                    (((i + 2) % m, (j - 1) % n), ((i + 2) % m, (j + 2) % n)),
+                    (((i - 1) % m, (j + 2) % n), ((i + 2) % m, (j + 2) % n)),
+                ], weight=-2 / 12)
+
+            elif (i % 2) and (j % 2):
+                blue.add_edges_from([
+                    (((i - 1) % m, (j - 1) % n), ((i + 2) % m, (j - 1) % n)),
+                    (((i - 1) % m, (j - 1) % n), ((i - 1) % m, (j + 2) % n)),
+                    (((i + 2) % m, (j - 1) % n), ((i + 2) % m, (j + 2) % n)),
+                    (((i - 1) % m, (j + 2) % n), ((i + 2) % m, (j + 2) % n)),
+                ], weight=2 / 24)
+
+    return (1 / 6, -1 / 12), (red, blue)
 
 def plaquette_decomposition_permutations(L: int) -> list[int]:
     assert not (L % 2)
