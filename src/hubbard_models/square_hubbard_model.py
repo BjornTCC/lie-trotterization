@@ -27,7 +27,7 @@ from src.hubbard_models.split_operator_error_coefficients import (
 )
 from src.hubbard_models.free_fermionic_errors import error_between_exp_of_free_fermionic
 
-from scipy.optimize import fsolve, minimize_scalar
+from scipy.optimize import fsolve, minimize_scalar, minimize
 
 def get_fermionic_operator(U: float, tau: float, L: int) -> FermionOperator:
     graph = nx.convert_node_labels_to_integers(nx.grid_2d_graph(L,L, periodic = True))
@@ -90,8 +90,8 @@ def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: floa
 
     bnds = [(0.00001,tm)]# These bounds ensure Npe > 0
 
-    min_res = minimize_scalar(opt_func, bounds = bnds[0])
-
+    #min_res = minimize_scalar(opt_func, bounds = bnds[0])
+    min_res = minimize(opt_func, t0, bounds=[(0.00001, tm)])
     if not min_res.success:
         warnings.warn(f"Npe optimizer failed with message: {min_res.message}")
 

@@ -41,6 +41,8 @@ def adaptive_phase_estimation_resources(
         "ancilla_qubits": measurement_ancillae
     }
 
+
+
     unitary_applications = math.ceil(np.log2(Npe))
 
     for nlayers, gate_bundle in zip([unitary_applications, Npe], [unitary_gates, gates_per_trotter_step]):
