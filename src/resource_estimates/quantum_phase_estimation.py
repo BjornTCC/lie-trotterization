@@ -1,11 +1,9 @@
 import math
-import warnings
 import numpy as np
-
-from scipy.optimize import minimize
 
 from src.resource_estimates.gate_costs.protocol import ResourceGate, gate_labels, depth_labels
 from src.resource_estimates.rotation_synthesis import synthesize_resource_dict_rotations
+from src.tools.single_variable_optimizer import one_d_optimizer
 
 def adaptive_phase_estimation_resources(
         target_error: float,
@@ -136,15 +134,9 @@ def _simulation_time_and_number_of_calls(
             return bit_precision_constant/(t*target_error - res)
 
         min_power = min(unitary_error_coefficients)
-        t0 = (target_error / (min_power * unitary_error_coefficients[min_power]))**(1/(min_power - 1))
 
         tm = (target_error / unitary_error_coefficients[min_power]) ** (1 / (min_power - 1))
 
-        bnds = [(0.00001, tm)]  # These bounds ensure Npe > 0
-        res = minimize(f, t0, bounds = bnds)
-        if not res.success:
-            warnings.warn(
-                f"minimize failed to converge with msg:\n{res.message}"
-            )
+        t, Npe = one_d_optimizer(f,0.00001, tm, strict_positive=True)
 
-        return res.x[0], math.ceil(res.fun)
+        return t, math.ceil(Npe)

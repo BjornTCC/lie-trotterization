@@ -8,8 +8,13 @@ import networkx as nx
 from scipy.optimize import fsolve, minimize
 from src.hubbard_models.free_fermionic_errors import error_between_exp_of_free_fermionic
 from src.hubbard_models._free_fermionic_computations import cast_data_to_array, spectral_norm_of_free_fermionic_operator, ff_commutator
-from src.hubbard_models.split_operator_error_coefficients import fourth_order_augmented_split_operator_error_coefficients, fourth_order_suzuki_trotter_split_operator_error_coefficient
-from src.bch_formula.commutator_bound import fourth_order_suzuki_trotter_commutator_bound
+from src.hubbard_models.split_operator_error_coefficients import (
+    fourth_order_augmented_split_operator_error_coefficients,
+    fourth_order_suzuki_trotter_split_operator_error_coefficient,
+    hexagonal_augmented_so_coeffs
+)
+from src.bch_formula.commutator_bound import fourth_order_suzuki_trotter_commutator_bound, augmented_commutator_bound
+from src.tools.single_variable_optimizer import one_d_optimizer
 
 class NegativeTrotterStepError(ValueError):
     """Raised when an optimizer converges, but the solution violates physical/domain constraints."""
@@ -54,9 +59,9 @@ def second_order_error_coefficient(U: float, tau: float, Lx: int, Ly: int) -> fl
     return U*U*tau * R1 / 24 + 9.9*U*tau**2 * (2*Lx*Ly) / 12 + 0.8532 * tau**3 * (2*Lx*Ly)
 
 def _augmented_hexagonal_trotter_steps(t: float, eps: float, U: float, tau: float, Lx: int, Ly: int) -> int:
-    W5, W6, W7 = _augmented_split_operator_error_coefficients(U, tau, Lx, Ly,  unitary_decomp=True)
+    W5, W6, W7, W9 = _augmented_hex_error_coefficients(U, tau, Lx,Ly , unitary_decomp=unitary_decomp)
 
-    f = lambda n: W5 * t**5 / n**4 + W6 * t**6 / n**6 + W7 * t**7 / n**6 + n * 2*_compute_augmented_trotter_error_numerically(t/(2*n), tau, Lx, Ly) - eps
+    f = lambda n: W5 * t**5 / n**4 + W6 * t**6 / n**6 + W7 * t**7 / n**6 + W9* t**9 / n**8 - eps
 
     x0 = W5**(1/4) * t**(5/4) /(eps**(1/4))
     res = fsolve(f, x0, full_output = True)
@@ -65,22 +70,23 @@ def _augmented_hexagonal_trotter_steps(t: float, eps: float, U: float, tau: floa
     return math.ceil(root)
 
 def _augmented_hexagonal_num_simulation_circuits(eps: float, U: float, tau: float, Lx: int, Ly: int, unitary_decomp: bool = True) -> tuple[float, int]:
-    W5, W6, W7 = _augmented_split_operator_error_coefficients(U, tau, Lx,Ly , unitary_decomp=unitary_decomp)
-    f = lambda t: W5 * t**5 + W6 * t**6 + W7 * t**7 + 2*_compute_augmented_trotter_error_numerically(t/2, tau, Lx, Ly)
+    W5, W6, W7, W9 = _augmented_hex_error_coefficients(U, tau, Lx,Ly , unitary_decomp=unitary_decomp)
+
+    f = lambda t: W5 * t**5  + W6 * t**6  + W7 * t**7 + W9* t**9
 
     opt_func = lambda t: 0.76*np.pi/(t*eps - f(t))
 
-    t0 = (eps / (5*W5))**(1/4)
     tm = (eps / W5)**(1/4)
-    # Check for bound
-    bnds = [(0.00001,tm)]# These bounds ensure Npe > 0
 
-    min_res =minimize(opt_func, t0, bounds=bnds) # minimize scalar fails in this case
+    t, Npe = one_d_optimizer(opt_func, 0.00001, tm, strict_positive=True)
 
-    if not min_res.success:
-        warnings.warn(f"Npe optimizer failed with message: {min_res.message}")
-    Npe = min_res.fun
-    return  min_res.x, max(math.ceil(Npe),1)
+    return  t, max(math.ceil(Npe),1)
+
+def _augmented_hex_error_coefficients(U: float, tau: float, Lx: int, Ly: int, unitary_decomp: bool) -> tuple[float,...]:
+    WSO5, WSO6, WSO7 = hexagonal_augmented_so_coeffs(U, tau, Lx, Ly,  unitary_decomp)
+    WFF5, WFF6, WFF7, WFF9 = _compute_augmented_trotter_error_coeficients_free_fermionic(tau, Lx, Ly)
+
+    return WFF5/(2**4) + WSO5, WFF6/(2**5) + WSO6, WFF7 / (2**6) + WSO7, WFF9 / (2**8)
 
 def tile_trotterization_hexagonal(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
     if  (Lx % 2) or (Ly % 2):
@@ -166,23 +172,6 @@ def colored_hexagonal_trotterization(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
 
     return Gr, Gb, Gy, whole
 
-
-def _augmented_split_operator_error_coefficients(U: float, tau: float, Lx: int, Ly: int, unitary_decomp: bool = True) -> tuple[float, float, float]:
-    N = 2*Lx* Ly
-    d = 3
-    Wso = (
-                  0.02178 * U**3
-                  + 0.1468 * tau*U**2
-                  + 1.215 * tau**2 * U
-                  + 4.640 *  tau**3
-          ) * tau*U*N
-    WH2H1 = (5 / 72 * (d**3 + d**2) * tau + 1 / 12 * d * tau + (5*d + 1) / 144 * U)*d*tau**2*U**2*N
-    WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
-    WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
-    if unitary_decomp:
-        return Wso + WH2H1, WH2H2H1, WSO7
-    return Wso, WH2H2H1, WSO7
-
 def _fourth_order_suzuki_trotter_error_coefficient(U: float, tau: float, Lx: int, Ly: int) -> float:
     return 2*Lx*Ly *tau*min((12.49922069753601*tau**4
                          +61.53483968248771 * tau**3 * U
@@ -195,66 +184,6 @@ def _fourth_order_suzuki_trotter_error_coefficient(U: float, tau: float, Lx: int
                          +3.015549518249892 * tau * U**3
                          +0.691517376259029 * U**4
                          ))
-
-def __fourth_order_suzuki_trotter_error_coefficient(U: float, tau: float, Lx: int, Ly: int) -> float:
-
-    # This bound is likely loose due to the non-uniformity of the hopping decomposition
-
-    four_terms = fourth_order_suzuki_trotter_commutator_bound(4)
-    H1, H2, H3, _ = tile_trotterization_hexagonal(Lx,Ly)
-    hoppings = [H1, H2, H3]
-    N = 2*Lx*Ly
-    d = 2
-    res = 0
-    for term, coeff in four_terms.items():
-        if (term[0], term[1],term[2], term[3]) == (4,4,4,4):
-            res += coeff * d * tau * U ** 4 * N
-        elif (term[0], term[1], term[3]) == (4,4,4):
-            res += coeff * 384 * d * tau * U ** 4 * N
-        elif (term[0], term[2],term[3]) == (4,4,4):
-            res += coeff * 128 * d * tau * U ** 4 * N
-        elif (term[1],term[2], term[3]) == (4,4,4):
-            res += coeff * 6 * d * tau * U ** 4 * N
-        elif (term[0],term[1], term[2]) == (4,4,4):
-            res += coeff * 128 * d * tau * U ** 4 * N
-        elif (term[0], term[3]) == (4,4):
-            res += coeff * 192 * d * tau * U ** 4 * N
-        elif (term[1], term[3]) == (4,4):
-            res += coeff * 240 * d * tau * U ** 4 * N
-        elif (term[2], term[3]) == (4,4):
-            res += coeff * 80 * d * tau * U ** 4 * N
-        elif (term[1], term[2]) == (4,4):
-            res += coeff * 128 * d * tau * U ** 4 * N
-        elif (term[0], term[2]) == (4,4):
-            res += coeff * 192 * d * tau * U ** 4 * N
-        elif (term[0], term[1]) == (4,4):
-            res += coeff * 64 * d * tau * U ** 4 * N
-        elif term[0] == 4:
-            res += coeff * 32 * d * tau * U ** 4 * N
-        elif term[1] == 4:
-            res += coeff * 48 * d * tau * U ** 4 * N
-        elif term[2] == 4:
-            res += coeff * 64 * d * tau * U ** 4 * N
-        elif term[3] == 4:
-            res += coeff * 96 * d * tau * U ** 4 * N
-
-        else:
-            operator = ff_commutator(
-                hoppings[term[0] - 1],
-                ff_commutator(
-                    hoppings[term[1] - 1],
-                    ff_commutator(
-                        hoppings[term[2] - 1],
-                        ff_commutator(
-                            hoppings[term[3] - 1],
-                            hoppings[term[4] - 1]
-                        )
-                    )
-                )
-            )
-            res += coeff * tau**5 * spectral_norm_of_free_fermionic_operator(operator)
-
-    return res
 
 """
 Augmented free fermionic:
@@ -401,17 +330,106 @@ def color_correctors(Lx, Ly) -> tuple[list[float], list[nx.Graph]]:
     _corr = [c(Lx, Ly) for c in [rbr, ryr, byb, bbr, yyr, yyb]] + list(triple_mixed_graphs(Lx, Ly))
     return [1/3,1/12,-1/6], _corr
 
-def _compute_augmented_trotter_error_numerically(t: float, tau: float, Lx: int, Ly: int) -> float:
-    Gr, Gb, Gy, G = colored_hexagonal_trotterization(Lx, Ly)
-    Gs = [Gr, Gb, Gy]
-    coeffs, correctors = color_correctors(Lx, Ly)
-    seq1 = [
-        1j*(tau*t)*0.5*(1+c*(tau*t)**2)*cast_data_to_array(g) for c,g in zip(coeffs, Gs)
-    ]
-    seq2 = [
-        1j * (tau*t) ** 3 * cast_data_to_array(g) for g in correctors
-    ]
+def _compute_augmented_trotter_error_coeficients_free_fermionic(tau: float, Lx: int, Ly: int) -> tuple[float]:
 
-    seq = seq1 + seq2 + seq1[::-1]
-    target = 1j*(tau*t)*cast_data_to_array(G)
-    return error_between_exp_of_free_fermionic(seq, target)
+    A, B, C, H = colored_hexagonal_trotterization(Lx, Ly)
+    A = cast_data_to_array(A)
+    B = cast_data_to_array(B)
+    C = cast_data_to_array(C)
+    H = cast_data_to_array(H)
+    Gs = [A, B, C]
+    coeffs, correctors = color_correctors(Lx, Ly)
+    a,b,c = coeffs
+    correctors = [cast_data_to_array(x) for x in correctors]
+
+    F = sum(correctors)
+    G = sum(correctors) + a*A + b*B + c*C
+
+    W5, W6, W7, W9 = 0.0, 0.0, 0.0, 0.0
+
+    augmented_coeffs = augmented_commutator_bound(3)
+    for comm, c in augmented_coeffs.items():
+        if "F" in comm:
+            op = ff_commutator(Gs[comm[0] - 1], ff_commutator(Gs[comm[1] - 1], G))
+        else:
+            Nh = sum([1 for x in comm if x == 'H'])
+            match Nh:
+                case 0:
+                    op = ff_commutator( Gs[comm[0] - 1],
+                        ff_commutator( Gs[comm[1] - 1],
+                            ff_commutator( Gs[comm[2] - 1],
+                                ff_commutator(
+                                    Gs[comm[3] - 1], Gs[comm[4] - 1],
+                                )
+                            )
+                        )
+                    )
+
+                case 1:
+                    op = ff_commutator(H,
+                        ff_commutator( Gs[comm[1] - 1],
+                            ff_commutator( Gs[comm[2] - 1],
+                                ff_commutator(
+                                    Gs[comm[3] - 1], Gs[comm[4] - 1],
+                                )
+                            )
+                        )
+                    )
+
+                case 2:
+                    op = ff_commutator( H,
+                        ff_commutator( H,
+                            ff_commutator( Gs[comm[2] - 1],
+                                ff_commutator(
+                                    Gs[comm[3] - 1], Gs[comm[4] - 1],
+                                )
+                            )
+                        )
+                    )
+
+                case 3:
+                    op = ff_commutator( H,
+                        ff_commutator( H,
+                            ff_commutator( H,
+                                ff_commutator(
+                                    Gs[comm[3] - 1], Gs[comm[4] - 1],
+                                )
+                            )
+                        )
+                    )
+
+                case 4:
+                    op = ff_commutator( H,
+                        ff_commutator( H,
+                            ff_commutator( H,
+                                ff_commutator(
+                                    H, Gs[comm[4] - 1],
+                                )
+                            )
+                        )
+                    )
+        W5 += tau**5 * spectral_norm_of_free_fermionic_operator(op) * c
+
+    W5 += tau**5 * a * spectral_norm_of_free_fermionic_operator(ff_commutator(C, ff_commutator(C, A))) / 8
+    W5 += tau**5 * b * spectral_norm_of_free_fermionic_operator(ff_commutator(C, ff_commutator(C, B))) / 8
+    W5 += tau**5 * a * spectral_norm_of_free_fermionic_operator(ff_commutator(B, ff_commutator(B, A))) / 8
+
+    for i in range(len(correctors)):
+        for j in range(i+1,len(correctors)):
+            W6 += tau**6 * spectral_norm_of_free_fermionic_operator(ff_commutator(correctors[i], correctors[j])) / 2
+
+    W7 += tau**7 * b**2 * spectral_norm_of_free_fermionic_operator(ff_commutator(B, ff_commutator(C, B))) / 8
+    W7 += tau**7 * a**2 * spectral_norm_of_free_fermionic_operator(ff_commutator(A, ff_commutator(C, A))) / 8
+    W7 += tau**7 * a**2 * spectral_norm_of_free_fermionic_operator(ff_commutator(A, ff_commutator(B, A))) / 8
+    W7 += tau**7 * a * spectral_norm_of_free_fermionic_operator(ff_commutator(F + b*B + c*C, ff_commutator(C, A))) / 4
+    W7 += tau**7 * a * spectral_norm_of_free_fermionic_operator(ff_commutator(F + b*B + c*C, ff_commutator(B, A))) / 4
+    W7 += tau**7 * b * spectral_norm_of_free_fermionic_operator(ff_commutator(F +  c*C, ff_commutator(C, B))) / 4
+
+    W9 += tau**9 * a * spectral_norm_of_free_fermionic_operator(ff_commutator(F +a*A + b* B, ff_commutator(F + b*B + c*C, A))) / 12
+    W9 += tau**9 * a**2 * spectral_norm_of_free_fermionic_operator(ff_commutator(A, ff_commutator(F + b*B + c*C, A))) / 24
+    W9 += tau**9 * b * spectral_norm_of_free_fermionic_operator(ff_commutator(F +c*C, ff_commutator(F + c*C, B))) / 12
+    W9 += tau**9 * c * spectral_norm_of_free_fermionic_operator(ff_commutator(F, ff_commutator(F, C))) / 12
+    W9 += tau**9 * b**2 * spectral_norm_of_free_fermionic_operator(ff_commutator(B, ff_commutator(F + c*C, B))) / 24
+    W9 += tau**9 * c**2 * spectral_norm_of_free_fermionic_operator(ff_commutator(C, ff_commutator(F, C))) / 24
+
+    return 2*W5, 2*W6, 2*W7, 2*W9

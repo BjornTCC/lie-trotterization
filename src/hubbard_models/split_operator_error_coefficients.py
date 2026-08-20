@@ -66,35 +66,53 @@ def fourth_order_suzuki_trotter_split_operator_error_coefficient_cubic(U: float,
         0.0133*U**3 + 0.5766*tau*U**2 + 44.86*tau**2*U + 1068.1 *tau**3,
     )
 
-
 def fourth_order_augmented_split_operator_error_coefficients(U: float, tau: float, N: int, d: int, unitary_decomp: bool = True) -> tuple[float, float, float]:
     Wso = (1 / 120 * U**3 + 9091 / 2880 * d*tau*U**2 + 257 / 90 * d**2 * tau**2 * U + 3 / 5 * d**3 * tau**3) * d*tau*U*N
+    WSO6 = 11 * d ** 3 * tau ** 3 * U ** 3 * N / 9
     WH2H1 = (5 / 72 * (d**3 + d**2) * tau + 1 / 12 * d * tau + (5*d + 1) / 144 * U)*d*tau**2*U**2*N
     WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
     WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
     if unitary_decomp:
-        return Wso + WH2H1, WH2H2H1, WSO7
-    return Wso, WH2H2H1, WSO7
-
+        return Wso + WH2H1, WH2H2H1 + WSO6, WSO7
+    return Wso, WH2H2H1 + WSO6, WSO7
 
 def square_augmented_so_coeffs(U: float, tau: float, L: int, unitary_decomp: bool = True) -> tuple[float]:
     d = 4
     N = L**2
     WH2H1 = (5 / 72 * (d**3 + d**2) * tau + 1 / 12 * d * tau + (5*d + 1) / 144 * U)*d*tau**2*U**2*N
-    WSO5 = (0.02042*U**3 + 0.209*tau*U**2 + 8.048 * tau**2 *U + 40.691*tau**3)*tau*U*N
+    WSO5 = (0.02127*U**3 + 0.2392*tau*U**2 + 8.611 * tau**2 *U + 42.96*tau**3)*tau*U*N
+    WSO6 = 11*d**3 *tau**3*U**3*N / 9
     WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
     WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
     if unitary_decomp:
-        return WSO5 + WH2H1, WH2H2H1, WSO7
-    return WSO5, WH2H2H1, WSO7
+        return WSO5 + WH2H1, WSO6 + WH2H2H1, WSO7
+    return WSO5, WSO6 + WH2H2H1, WSO7
+
+def hexagonal_augmented_so_coeffs(U: float, tau: float, Lx: int, Ly: int, unitary_decomp: bool = True) -> tuple[float, float, float]:
+    N = 2*Lx* Ly
+    d = 3
+    WSO5 = (
+                  0.01135 * U**3
+                  + 0.08394 * tau*U**2
+                  + 0.6512 * tau**2 * U
+                  + 2.449 *  tau**3
+          ) * tau*U*N
+    WSO6 = 11 * d ** 3 * tau ** 3 * U ** 3 * N / 9
+    WH2H1 = (5 / 72 * (d**3 + d**2) * tau + 1 / 12 * d * tau + (5*d + 1) / 144 * U)*d*tau**2*U**2*N
+    WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
+    WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
+    if unitary_decomp:
+        return WSO5 + WH2H1, WSO6 + WH2H2H1, WSO7
+    return WSO5, WSO6 + WH2H2H1, WSO7
 
 def cubic_augmented_so_coeffs(U: float, tau: float, L: int, unitary_decomp: bool = True) -> tuple[float]:
     d = 6
     N = L**3
     WH2H1 = (5 / 72 * (d**3 + d**2) * tau + 1 / 12 * d * tau + (5*d + 1) / 144 * U)*d*tau**2*U**2*N
-    WSO5 = (0.0236*U**3 + 0.449*tau*U**2 + 32.4 * tau**2 *U + 235.042*tau**3)*tau*U*N
+    WSO5 = (0.02456*U**3 + 0.5090*tau*U**2 + 34.64 * tau**2 *U + 248.1*tau**3)*tau*U*N
+    WSO6 = 11 * d ** 3 * tau ** 3 * U ** 3 * N / 9
     WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
     WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
     if unitary_decomp:
-        return WSO5 + WH2H1, WH2H2H1, WSO7
-    return WSO5, WH2H2H1, WSO7
+        return WSO5 + WH2H1, WH2H2H1 + WSO6, WSO7
+    return WSO5, WH2H2H1 + WSO6, WSO7
