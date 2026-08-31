@@ -21,7 +21,7 @@ class NegativeTrotterStepError(ValueError):
     """Raised when an optimizer converges, but the solution violates physical/domain constraints."""
     pass
 
-def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, Lx: int, Ly: int, type: str) -> dict:
+def compute_number_of_trotter_steps_kwargs(t: float, eps: float, U: float, tau: float, Lx: int, Ly: int, type: str) -> dict:
     if type == "tile":
         W = second_order_error_coefficient(U, tau, Lx, Ly)
         return {"num_trotter_steps": math.ceil(
@@ -37,7 +37,7 @@ def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, 
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
-def compute_evolution_time_and_number_of_simulation_circuits_for_qpe(eps: float, U: float, tau: float, Lx: int, Ly: int, type: str, unitary_decomp: bool = True) -> dict:
+def compute_evolution_time_and_number_of_simulation_circuits_for_qpe_kwargs(eps: float, U: float, tau: float, Lx: int, Ly: int, type: str, unitary_decomp: bool = True) -> dict:
     if type == "tile":
         W = second_order_error_coefficient(U, tau, Lx, Ly)
         return {"num_simulation_steps": math.ceil(
@@ -58,30 +58,6 @@ def second_order_error_coefficient(U: float, tau: float, Lx: int, Ly: int) -> fl
     R1 = 2*spectral_norm_of_free_fermionic_operator(G)
 
     return U*U*tau * R1 / 24 + 9.9*U*tau**2 * (2*Lx*Ly) / 12 + 0.8532 * tau**3 * (2*Lx*Ly)
-
-def _augmented_hexagonal_trotter_steps(t: float, eps: float, U: float, tau: float, Lx: int, Ly: int) -> int:
-    W5, W6, W7, W9 = _augmented_hex_error_coefficients(U, tau, Lx,Ly , unitary_decomp=unitary_decomp)
-
-    f = lambda n: W5 * t**5 / n**4 + W6 * t**6 / n**6 + W7 * t**7 / n**6 + W9* t**9 / n**8 - eps
-
-    x0 = W5**(1/4) * t**(5/4) /(eps**(1/4))
-    res = fsolve(f, x0, full_output = True)
-    root = res[0][0]
-
-    return math.ceil(root)
-
-def _augmented_hexagonal_num_simulation_circuits(eps: float, U: float, tau: float, Lx: int, Ly: int, unitary_decomp: bool = True) -> tuple[float, int]:
-    W5, W6, W7, W9 = _augmented_hex_error_coefficients(U, tau, Lx,Ly , unitary_decomp=unitary_decomp)
-
-    f = lambda t: W5 * t**5  + W6 * t**6  + W7 * t**7 + W9* t**9
-
-    opt_func = lambda t: 0.76*np.pi/(t*eps - f(t))
-
-    tm = (eps / W5)**(1/4)
-
-    t, Npe = one_d_optimizer(opt_func, 0.00001, tm, strict_positive=True)
-
-    return  t, max(math.ceil(Npe),1)
 
 def _augmented_hex_error_coefficients(U: float, tau: float, Lx: int, Ly: int, unitary_decomp: bool) -> tuple[float,...]:
     split_op_coeffs = hexagonal_augmented_so_coeffs(U, tau, Lx, Ly,  unitary_decomp)

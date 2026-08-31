@@ -1,6 +1,9 @@
 import math
 
-from src.hubbard_models.hexagonal_hubbard import compute_evolution_time_and_number_of_simulation_circuits_for_qpe, compute_number_of_trotter_steps
+from src.hubbard_models.hexagonal_hubbard import (
+    compute_evolution_time_and_number_of_simulation_circuits_for_qpe_kwargs,
+    compute_number_of_trotter_steps_kwargs
+)
 
 from src.resource_estimates.gate_costs.protocol import ResourceGate
 from src.resource_estimates.gate_costs.free_fermionic import FreeFermionicS1Tile, FreeFermionicS2Tile, FreeFermionicS3Tile
@@ -36,7 +39,7 @@ def hubbard_model_phase_estimation_resources(
 ) -> dict[str: int]:
     if time_evolution_algorithm == "qubitization":
         return get_qubitization_gate_counts(U, tau, Lx, Ly, target_error)
-    extra_kwargs =  compute_evolution_time_and_number_of_simulation_circuits_for_qpe(
+    extra_kwargs =  compute_evolution_time_and_number_of_simulation_circuits_for_qpe_kwargs(
         target_error if x is None else target_error * (1 - x),
         U,
         tau,
@@ -82,7 +85,7 @@ def hubbard_model_time_evolution_resources(
         synthesize_rotation_with: str = "RUS",
         hwp: bool = False
 ) -> dict[str: int]:
-    extra_kwargs = compute_number_of_trotter_steps(
+    extra_kwargs = compute_number_of_trotter_steps_kwargs(
         t,
         target_error if x is None else target_error * (1 - x),
         U,

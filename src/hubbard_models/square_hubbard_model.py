@@ -68,30 +68,6 @@ def compute_evolution_time_and_number_of_simulation_circuits_for_qpe_kwargs(eps:
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
-def _augmented_plaquette_trotter_steps(t: float, eps: float, U: float, tau: float, L: int) -> int:
-    W5, W6, W7, W9 = _augmented_plaquette_error_coefficients(U, tau, L,  unitary_decomp=True)
-
-    f = lambda n: W5 * t**5 / n**4 + W6 * t**6 / n**6 + W7 * t**7 / n**6 + W9 * t**9 / n**8 - eps
-
-    x0 = W5**(1/4) * t**(5/4) /(eps**(1/4))
-    res = fsolve(f, x0, full_output = True)
-    root = res[0][0]
-
-    return math.ceil(root)
-
-def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: float, L: int, unitary_decomp: bool = True) -> tuple[float, int]:
-    W5, W6, W7, W9 = _augmented_plaquette_error_coefficients(U, tau, L,  unitary_decomp=unitary_decomp)
-    f = lambda t: W5 * t**5 + W6 * t**6 + W7 * t**7 + W9 * t**9
-    opt_func = lambda t: 0.76*np.pi/(t*eps - f(t))
-
-    tm = (eps / W5)**(1/4)
-
-    bnds = [(0.00001,tm)]# These bounds ensure Npe > 0
-
-    t, Npe = one_d_optimizer(opt_func, 0.00001, tm, strict_positive=True)
-
-    return  t, math.ceil(Npe)
-
 def _augmented_plaquette_error_coefficients(U: float, tau: float, L: int, unitary_decomp: bool) -> tuple[float,...]:
     split_op_coeffs = square_augmented_so_coeffs(U, tau, L,  unitary_decomp)
     free_fermion_coeffs = _augmented_plaquette_free_fermionic_error_coefficients(tau/2, L)
