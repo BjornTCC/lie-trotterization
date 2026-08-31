@@ -293,3 +293,90 @@ def augmented_commutator_bound(M: int, split_F: bool = False, split_H: bool = Fa
             _res[key] = val
     res = _res
     return res
+
+def augmented_commutator_bound_alternate(M: int, split_F: bool = False, split_H: bool = False) -> dict[tuple: float]:
+    res = {}
+    for i in range(M+1):
+        res[(i,i,'F')] = 3/40
+    for i in range(M+1):
+        for j in range(i+1, M+1):
+            res[(i,j,'F')] = 3 / 20
+        if i == 0:
+            continue
+        dists = integer_sum_tuples(4, i+1)
+        for dist in dists:
+            key = []
+            for j,d in enumerate(dist):
+                key.extend([j]*d)
+            key.append(i)
+            key = tuple(key)
+            res[key] = (1/1920) * multinomial(dist)
+    _res = {}
+    for key, val in res.items():
+        if 0 in key:
+            new_key = tuple(['H' if x == 0 else x for x in key])
+            _res[new_key] = val
+        else:
+            _res[key] = val
+    res = _res
+    if split_F:
+        _res = {}
+        for key, val in res.items():
+            if key[-1] == 'F':
+                for j in range(1, M+1):
+                    for k in range(j+1, M+1):
+                        _key = (key[0], key[1], j,k,j)
+
+                        if _key in _res.keys():
+                            _res[_key] += val / 24
+                        else:
+                            _res[_key] = val / 24
+
+                        for i in range(j+1, M+1):
+                            _key = (key[0], key[1], i,j,k)
+
+                            if _key in _res.keys():
+                                _res[_key] += val / 12
+                            else:
+                                _res[_key] = val / 12
+            else:
+                if key in _res.keys():
+                    _res[key] += val
+                else:
+                    _res[key] = val
+        res = _res
+    if split_H:
+        _res = {}
+        for key, val in res.items():
+            Nh = sum([1 for x in key if x == 'H'])
+            if Nh > 0:
+                pset = product_set(M, Nh)
+                for index in pset:
+                    _key = tuple([x+1 for x in index] + list(key[Nh:]))
+                    if _key[-1] == _key[-2]:
+                        continue
+                    if _key in _res.keys():
+                        _res[_key] += val
+                    else:
+                        _res[_key] = val
+
+            else:
+                if key in _res.keys():
+                    _res[key] += val
+                else:
+                    _res[key] = val
+        res = _res
+    _res = {}
+    for key, val in res.items():
+        if len(key) < 4:
+            _res[key] = val
+            continue
+        alt_key = (key[0], key[1],key[2], key[4], key[3])
+        if key == alt_key:
+            continue
+        if alt_key in _res.keys():
+            _res[alt_key] += val
+        else:
+            _res[key] = val
+    res = _res
+    return res
