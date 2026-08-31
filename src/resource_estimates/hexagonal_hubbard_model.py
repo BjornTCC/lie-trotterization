@@ -36,7 +36,7 @@ def hubbard_model_phase_estimation_resources(
 ) -> dict[str: int]:
     if time_evolution_algorithm == "qubitization":
         return get_qubitization_gate_counts(U, tau, Lx, Ly, target_error)
-    _,num_simulation_steps = compute_evolution_time_and_number_of_simulation_circuits_for_qpe(
+    extra_kwargs =  compute_evolution_time_and_number_of_simulation_circuits_for_qpe(
         target_error if x is None else target_error * (1 - x),
         U,
         tau,
@@ -53,7 +53,7 @@ def hubbard_model_phase_estimation_resources(
                 target_error,
                 trotter_step_gates,
                 unitary_gates,
-                num_simulation_steps=num_simulation_steps,
+                **extra_kwargs,
                 x=x,
                 synthesize_rotation_with=synthesize_rotation_with
             )
@@ -63,7 +63,7 @@ def hubbard_model_phase_estimation_resources(
                 target_error,
                 trotter_step_gates,
                 unitary_gates,
-                num_simulation_steps=num_simulation_steps,
+                **extra_kwargs,
                 x=x,
                 synthesize_rotation_with=synthesize_rotation_with
             )
@@ -82,7 +82,7 @@ def hubbard_model_time_evolution_resources(
         synthesize_rotation_with: str = "RUS",
         hwp: bool = False
 ) -> dict[str: int]:
-    num_simulation_steps = compute_number_of_trotter_steps(
+    extra_kwargs = compute_number_of_trotter_steps(
         t,
         target_error if x is None else target_error * (1 - x),
         U,
@@ -98,7 +98,7 @@ def hubbard_model_time_evolution_resources(
         target_error,
         trotter_step_gates,
         unitary_gates,
-        num_trotter_steps=num_simulation_steps,
+        **extra_kwargs,
         x=x,
         synthesize_rotation_with=synthesize_rotation_with
     )

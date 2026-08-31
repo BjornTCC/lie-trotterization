@@ -28,6 +28,7 @@ from src.hubbard_models.split_operator_error_coefficients import (
 from src.hubbard_models.free_fermionic_errors import error_between_exp_of_free_fermionic
 from src.bch_formula.commutator_bound import augmented_commutator_bound
 from src.tools.single_variable_optimizer import one_d_optimizer
+from src.tools.add_dict import add_dicts
 
 from scipy.optimize import fsolve
 
@@ -35,35 +36,35 @@ def get_fermionic_operator(U: float, tau: float, L: int) -> FermionOperator:
     graph = nx.convert_node_labels_to_integers(nx.grid_2d_graph(L,L, periodic = True))
     return hubbard_from_nx(tau, U, graph)
 
-def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, L: int, type: str) -> int:
+def compute_number_of_trotter_steps_kwargs(t: float, eps: float, U: float, tau: float, L: int, type: str) -> dict:
     if type == "plaquette":
         W = second_order_error_coefficient_alt(U, tau, L)
-        return math.ceil(
+        return {"num_trotter_steps": math.ceil(
             np.sqrt(W / eps) * t**(3/2)
-        )
+        )}
     elif type == "plaquette suzuki-trotter":
         W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, L)
-        return math.ceil(
+        return {"num_trotter_steps": math.ceil(
             (W / eps)**(1/4) * t**(5/4)
-        )
+        )}
     elif type == "augmented plaquette":
-        return _augmented_plaquette_trotter_steps(t, eps, U, tau, L)
+        return {"error_coefficients": _augmented_plaquette_error_coefficients(U, tau, L, unitary_decomp=True)}
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
-def compute_evolution_time_and_number_of_simulation_circuits_for_qpe(eps: float, U: float, tau: float, L: int, type: str, unitary_decomp: bool = True) -> tuple[float,int]:
+def compute_evolution_time_and_number_of_simulation_circuits_for_qpe_kwargs(eps: float, U: float, tau: float, L: int, type: str, unitary_decomp: bool = True) -> dict:
     if type == "plaquette":
         W = second_order_error_coefficient_alt(U, tau, L)
-        return np.sqrt(eps / (3*W)), math.ceil(
+        return {"num_simulation_steps": math.ceil(
             6.203 * W**(1/2) / (eps**(3/2))
-        )
+        )}
     elif type == "plaquette suzuki-trotter":
         W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, L)
-        return (eps / (5*W))**(1/4), math.ceil(
+        return {"num_simulation_steps": math.ceil(
             4.463 * W ** (1 / 4) /(eps ** (5 / 4))
-        )
+        )}
     elif type == "augmented plaquette":
-        return _augmented_plaquette_num_simulation_circuits(eps, U, tau, L, unitary_decomp=unitary_decomp)
+        return {"unitary_error_coefficients": _augmented_plaquette_error_coefficients(U, tau, L, unitary_decomp=unitary_decomp)}
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
@@ -92,10 +93,10 @@ def _augmented_plaquette_num_simulation_circuits(eps: float, U: float, tau: floa
     return  t, math.ceil(Npe)
 
 def _augmented_plaquette_error_coefficients(U: float, tau: float, L: int, unitary_decomp: bool) -> tuple[float,...]:
-    WSO5, WSO6, WSO7 = square_augmented_so_coeffs(U, tau, L,  unitary_decomp)
-    WFF5, WFF6, WFF7, WFF9 = _augmented_plaquette_free_fermionic_error_coefficients(tau, L)
+    split_op_coeffs = square_augmented_so_coeffs(U, tau, L,  unitary_decomp)
+    free_fermion_coeffs = _augmented_plaquette_free_fermionic_error_coefficients(tau/2, L)
 
-    return WFF5/(2**4) + WSO5, WFF6/(2**5) + WSO6, WFF7 / (2**6) + WSO7, WFF9 / (2**8)
+    return add_dicts(split_op_coeffs, free_fermion_coeffs, scale_2nd=2)
 
 def _fourth_order_suzuki_trotter_error_coefficient(U: float, tau: float, L: int) -> float:
     # From:https://journals.aps.org/prb/abstract/10.1103/PhysRevB.108.195105
@@ -269,7 +270,7 @@ def _augmented_plaquette_free_fermionic_error_coefficients(tau: float, L: int) -
     W9 += tau ** 9 * b * spectral_norm_of_free_fermionic_operator(ff_commutator(F, ff_commutator(F, A))) / 12
     W9 += tau ** 9 * a**2 * spectral_norm_of_free_fermionic_operator(ff_commutator(A, ff_commutator(F + b * B, B))) / 24
     W9 += tau ** 9 * b**2 * spectral_norm_of_free_fermionic_operator(ff_commutator(B, ff_commutator(F, B))) / 24
-    return 2*W5, 2*W6, 2*W7, 2*W9
+    return {5: 2*W5, 6: 2*W6, 7: 2*W7, 9: 2*W9}
 
 def plaquette_decomposition_permutations(L: int) -> list[int]:
     assert not (L % 2)

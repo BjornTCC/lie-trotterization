@@ -73,8 +73,8 @@ def fourth_order_augmented_split_operator_error_coefficients(U: float, tau: floa
     WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
     WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
     if unitary_decomp:
-        return Wso + WH2H1, WH2H2H1 + WSO6, WSO7
-    return Wso, WH2H2H1 + WSO6, WSO7
+        return {5: Wso + WH2H1, 6: WH2H2H1 + WSO6, 7: WSO7}
+    return {5: Wso, 6: WH2H2H1 + WSO6, 7: WSO7}
 
 def square_augmented_so_coeffs(U: float, tau: float, L: int, unitary_decomp: bool = True) -> tuple[float]:
     d = 4
@@ -85,8 +85,8 @@ def square_augmented_so_coeffs(U: float, tau: float, L: int, unitary_decomp: boo
     WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
     WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
     if unitary_decomp:
-        return WSO5 + WH2H1, WSO6 + WH2H2H1, WSO7
-    return WSO5, WSO6 + WH2H2H1, WSO7
+        return {5: WSO5 + WH2H1, 6: WSO6 + WH2H2H1, 7: WSO7}
+    return {5: WSO5, 6: WSO6 + WH2H2H1, 7: WSO7}
 
 def hexagonal_augmented_so_coeffs(U: float, tau: float, Lx: int, Ly: int, unitary_decomp: bool = True) -> tuple[float, float, float]:
     N = 2*Lx* Ly
@@ -102,8 +102,8 @@ def hexagonal_augmented_so_coeffs(U: float, tau: float, Lx: int, Ly: int, unitar
     WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
     WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
     if unitary_decomp:
-        return WSO5 + WH2H1, WSO6 + WH2H2H1, WSO7
-    return WSO5, WSO6 + WH2H2H1, WSO7
+        return {5: WSO5 + WH2H1, 6: WSO6 + WH2H2H1, 7: WSO7}
+    return {5: WSO5, 6: WSO6 + WH2H2H1, 7: WSO7}
 
 def cubic_augmented_so_coeffs(U: float, tau: float, L: int, unitary_decomp: bool = True) -> tuple[float]:
     d = 6
@@ -114,5 +114,5 @@ def cubic_augmented_so_coeffs(U: float, tau: float, L: int, unitary_decomp: bool
     WH2H2H1 = 1 / 288 * d**2 * tau**2 * U**4 * N
     WSO7 = (67 / 2688 * U + 55 / 21 * d * tau) * d**2*tau**2 * U**4 * N
     if unitary_decomp:
-        return WSO5 + WH2H1, WH2H2H1 + WSO6, WSO7
-    return WSO5, WH2H2H1 + WSO6, WSO7
+        return {5: WSO5 + WH2H1, 6: WSO6 + WH2H2H1, 7: WSO7}
+    return {5: WSO5, 6: WSO6 + WH2H2H1, 7: WSO7}

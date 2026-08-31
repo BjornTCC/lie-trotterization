@@ -15,40 +15,41 @@ from src.hubbard_models.split_operator_error_coefficients import (
 )
 from src.bch_formula.commutator_bound import fourth_order_suzuki_trotter_commutator_bound, augmented_commutator_bound
 from src.tools.single_variable_optimizer import one_d_optimizer
+from src.tools.add_dict import add_dicts
 
 class NegativeTrotterStepError(ValueError):
     """Raised when an optimizer converges, but the solution violates physical/domain constraints."""
     pass
 
-def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, Lx: int, Ly: int, type: str) -> int:
+def compute_number_of_trotter_steps(t: float, eps: float, U: float, tau: float, Lx: int, Ly: int, type: str) -> dict:
     if type == "tile":
         W = second_order_error_coefficient(U, tau, Lx, Ly)
-        return math.ceil(
-            np.sqrt(W / eps) * t**(3/2)
-        )
+        return {"num_trotter_steps": math.ceil(
+            np.sqrt(W / eps) * t ** (3 / 2)
+        )}
     elif type == "tile 4th":
         W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, Lx, Ly)
-        return math.ceil(
-            (W / eps)**(1/4) * t**(5/4)
-        )
+        return {"num_trotter_steps": math.ceil(
+            (W / eps) ** (1 / 4) * t ** (5 / 4)
+        )}
     elif type == "augmented tile":
-        return _augmented_hexagonal_trotter_steps(t, eps, U, tau, Lx, Ly)
+        return {"error_coefficients": _augmented_hex_error_coefficients(U, tau, Lx, Ly, unitary_decomp=True)}
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
-def compute_evolution_time_and_number_of_simulation_circuits_for_qpe(eps: float, U: float, tau: float, Lx: int, Ly: int, type: str, unitary_decomp: bool = True) -> tuple[float,int]:
+def compute_evolution_time_and_number_of_simulation_circuits_for_qpe(eps: float, U: float, tau: float, Lx: int, Ly: int, type: str, unitary_decomp: bool = True) -> dict:
     if type == "tile":
         W = second_order_error_coefficient(U, tau, Lx, Ly)
-        return np.sqrt(eps / (3*W)), math.ceil(
-            6.203 * W**(1/2) / (eps**(3/2))
-        )
+        return {"num_simulation_steps": math.ceil(
+            6.203 * W ** (1 / 2) / (eps ** (3 / 2))
+        )}
     elif type == "tile 4th":
         W = _fourth_order_suzuki_trotter_error_coefficient(U, tau, Lx, Ly)
-        return (eps / (5*W))**(1/4), math.ceil(
-            4.463 * W ** (1 / 4) /(eps ** (5 / 4))
-        )
+        return {"num_simulation_steps": math.ceil(
+            4.463 * W ** (1 / 4) / (eps ** (5 / 4))
+        )}
     elif type == "augmented tile":
-        return _augmented_hexagonal_num_simulation_circuits(eps, U, tau, Lx, Ly, unitary_decomp = unitary_decomp)
+        return {"unitary_error_coefficients": _augmented_hex_error_coefficients(U, tau, Lx, Ly, unitary_decomp=unitary_decomp)}
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
@@ -83,10 +84,10 @@ def _augmented_hexagonal_num_simulation_circuits(eps: float, U: float, tau: floa
     return  t, max(math.ceil(Npe),1)
 
 def _augmented_hex_error_coefficients(U: float, tau: float, Lx: int, Ly: int, unitary_decomp: bool) -> tuple[float,...]:
-    WSO5, WSO6, WSO7 = hexagonal_augmented_so_coeffs(U, tau, Lx, Ly,  unitary_decomp)
-    WFF5, WFF6, WFF7, WFF9 = _compute_augmented_trotter_error_coeficients_free_fermionic(tau, Lx, Ly)
+    split_op_coeffs = hexagonal_augmented_so_coeffs(U, tau, Lx, Ly,  unitary_decomp)
+    free_fermionic_coeffs = _compute_augmented_trotter_error_coeficients_free_fermionic(tau/2, Lx, Ly)
 
-    return WFF5/(2**4) + WSO5, WFF6/(2**5) + WSO6, WFF7 / (2**6) + WSO7, WFF9 / (2**8)
+    return add_dicts(split_op_coeffs, free_fermionic_coeffs, scale_2nd=2)
 
 def tile_trotterization_hexagonal(Lx: int, Ly: int) -> tuple[nx.Graph, ...]:
     if  (Lx % 2) or (Ly % 2):
@@ -432,4 +433,4 @@ def _compute_augmented_trotter_error_coeficients_free_fermionic(tau: float, Lx: 
     W9 += tau**9 * b**2 * spectral_norm_of_free_fermionic_operator(ff_commutator(B, ff_commutator(F + c*C, B))) / 24
     W9 += tau**9 * c**2 * spectral_norm_of_free_fermionic_operator(ff_commutator(C, ff_commutator(F, C))) / 24
 
-    return 2*W5, 2*W6, 2*W7, 2*W9
+    return {5: 2*W5, 6: 2*W6, 7: 2*W7, 9: 2*W9}
