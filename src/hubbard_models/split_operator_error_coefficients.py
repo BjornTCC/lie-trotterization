@@ -88,8 +88,8 @@ def square_augmented_so_coeffs(U: float, tau: float, L: int, unitary_decomp: boo
     WH2H1 = (1.793*tau + 0.128 * U)*tau**2*U**2*N
     WH2H1_7 = (1.703*d**3 - 0.0006 * d**2 + 0.0004 * d)*tau**3*U**4*N
     WH2H2H1 = d*(d-1)*tau**2*U**4*N / 1152
-    WSO7 = (1.64*U**2 + 6.06 * d*tau * U + 4.77 * d**2*tau**2) * d**2*tau**2 * U**3 * N
-    WSO9 = 190*d**4*tau**4*U**5
+    WSO7 = (8.71*U**2 + 16.2 * d*tau * U + 9.53 * d**2*tau**2) * d**2*tau**2 * U**3 * N
+    WSO9 = 380*d**4*tau**4*U**5
     if unitary_decomp:
         return {5: WSO5 + WH2H1, 6: WH2H2H1, 7: WSO7 + WH2H1_7, 9: WSO9}
     return {5: WSO5, 6: WH2H2H1, 7: WSO7, 9: WSO9}
@@ -106,8 +106,8 @@ def hexagonal_augmented_so_coeffs(U: float, tau: float, Lx: int, Ly: int, unitar
     WH2H1 = (0.499 * tau + 0.064 * U)*tau**2*U**2*N
     WH2H1_7 = (1.703*d**3 - 0.0006 * d**2 + 0.0004 * d)*tau**3*U**4*N
     WH2H2H1 = d*(d-1)*tau**2*U**4*N / 1152
-    WSO7 = (1.64*U**2 + 6.06 * d*tau * U + 4.77 * d**2*tau**2) * d**2*tau**2 * U**3 * N
-    WSO9 = 190*d**4*tau**4*U**5
+    WSO7 = (8.71*U**2 + 16.2 * d*tau * U + 9.53 * d**2*tau**2) * d**2*tau**2 * U**3 * N
+    WSO9 = 380*d**4*tau**4*U**5
     if unitary_decomp:
         return {5: WSO5 + WH2H1, 6: WH2H2H1, 7: WSO7 + WH2H1_7, 9: WSO9}
     return {5: WSO5, 6: WH2H2H1, 7: WSO7, 9: WSO9}
@@ -124,8 +124,8 @@ def cubic_augmented_so_coeffs(U: float, tau: float, L: int, unitary_decomp: bool
     WH2H1 = (6.736*tau + 0.285*U)*tau**2*U**2*N
     WH2H1_7 = (1.703*d**3 - 0.0006 * d**2 + 0.0004 * d)*tau**3*U**4*N
     WH2H2H1 = d*(d-1)*tau**2*U**4*N / 1152
-    WSO7 = (1.64*U**2 + 6.06 * d*tau * U + 4.77 * d**2*tau**2) * d**2*tau**2 * U**3 * N
-    WSO9 = 190*d**4*tau**4*U**5
+    WSO7 = (8.71*U**2 + 16.2 * d*tau * U + 9.53 * d**2*tau**2) * d**2*tau**2 * U**3 * N
+    WSO9 = 380*d**4*tau**4*U**5
     if unitary_decomp:
         return {5: WSO5 + WH2H1, 6: WH2H2H1, 7: WSO7 + WH2H1_7, 9: WSO9}
     return {5: WSO5, 6: WH2H2H1, 7: WSO7, 9: WSO9}
