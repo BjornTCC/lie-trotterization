@@ -27,7 +27,6 @@ def fourth_order_coefficient(sites: np.ndarray, interaction: callable, U: float)
         1.2032 * I * U**4 + 5.12 * I**2 * U**3 + (10.71 + 6.912)*I**3 * U**2 + 7.2704 * I**4 * U
     )
 
-
 def augmented_coefficients(sites: np.ndarray, interaction: callable, U: float, unitary_decomp: bool = True) -> float:
     N, d = sites.shape
     interaction_vals = [interaction(sites[0],y) for y in sites[1:]]
