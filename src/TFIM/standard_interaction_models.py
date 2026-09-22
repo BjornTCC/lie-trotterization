@@ -16,7 +16,7 @@ def hexagonal_power_law(Lx: int, Ly: int, interaction_strength: float, alpha: fl
     for n in G.nodes:
         if n != (Lx, Ly):
             positions.append(pos[n])
-    positions = np.array(positions)
+    positions = 2*np.array(positions) # Factor 2 ensures that all distances >= 1
 
     def poly(n1, n2):
         dist = np.sqrt(np.sum((n1 - n2) ** 2))

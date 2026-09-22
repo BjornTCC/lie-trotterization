@@ -9,7 +9,7 @@ from src.resource_estimates.gate_costs.skew_field_ising_model import (
     ZYInteraction,
 )
 
-def gates_from_graph(
+def gates_from_graph_2nd(
         G: nx.Graph,
         hwp: bool = False
 ) -> tuple[dict[ResourceGate: int], dict[ResourceGate: int]]:
@@ -22,6 +22,38 @@ def gates_from_graph(
         XField(): N
     }, {
         XField(): N,
+    }
+
+def gates_from_graph_4th(
+        G: nx.Graph,
+        hwp: bool = False
+) -> tuple[dict[ResourceGate: int], dict[ResourceGate: int]]:
+    if hwp:
+        raise NotImplementedError()
+    N = len(G.nodes)
+    total_interactions = len(G.edges)
+    return {
+        ZInteraction(): 5*total_interactions,
+        XField(): 5*N
+    }, {
+        XField(): N,
+    }
+
+def gates_from_graph_augmented(
+        G: nx.Graph,
+        hwp: bool = False
+) -> tuple[dict[ResourceGate: int], dict[ResourceGate: int]]:
+    if hwp:
+        raise NotImplementedError()
+    N = len(G.nodes)
+    total_interactions = len(G.edges)
+    return {
+        ZInteraction(): total_interactions,
+        YInteraction(): total_interactions,
+        XField(): 2*N
+    }, {
+        ZInteraction(): total_interactions,
+        ZYInteraction(): 2*total_interactions
     }
 
 def gates_from_positions_and_interaction_2nd_order(
