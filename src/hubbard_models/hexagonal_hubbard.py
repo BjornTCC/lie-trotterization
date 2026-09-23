@@ -21,7 +21,7 @@ class NegativeTrotterStepError(ValueError):
     """Raised when an optimizer converges, but the solution violates physical/domain constraints."""
     pass
 
-def compute_number_of_trotter_steps_kwargs(t: float, eps: float, U: float, tau: float, Lx: int, Ly: int, type: str) -> dict:
+def compute_number_of_trotter_steps_kwargs(t: float, eps: float, U: float, tau: float, Lx: int, Ly: int, type: str, s2_correctors: bool = True) -> dict:
     if type == "tile":
         W = second_order_error_coefficient(U, tau, Lx, Ly)
         return {"num_trotter_steps": math.ceil(
@@ -33,11 +33,11 @@ def compute_number_of_trotter_steps_kwargs(t: float, eps: float, U: float, tau: 
             (W / eps) ** (1 / 4) * t ** (5 / 4)
         )}
     elif type == "augmented tile":
-        return {"error_coefficients": _augmented_hex_error_coefficients(U, tau, Lx, Ly, unitary_decomp=True)}
+        return {"error_coefficients": _augmented_hex_error_coefficients(U, tau, Lx, Ly, unitary_decomp=True, s2_correctors=s2_correctors)}
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
-def compute_evolution_time_and_number_of_simulation_circuits_for_qpe_kwargs(eps: float, U: float, tau: float, Lx: int, Ly: int, type: str, unitary_decomp: bool = True) -> dict:
+def compute_evolution_time_and_number_of_simulation_circuits_for_qpe_kwargs(eps: float, U: float, tau: float, Lx: int, Ly: int, type: str, unitary_decomp: bool = True, s2_correctors: bool = True) -> dict:
     if type == "tile":
         W = second_order_error_coefficient(U, tau, Lx, Ly)
         return {"num_simulation_steps": math.ceil(
@@ -49,7 +49,7 @@ def compute_evolution_time_and_number_of_simulation_circuits_for_qpe_kwargs(eps:
             4.463 * W ** (1 / 4) / (eps ** (5 / 4))
         )}
     elif type == "augmented tile":
-        return {"unitary_error_coefficients": _augmented_hex_error_coefficients(U, tau, Lx, Ly, unitary_decomp=unitary_decomp)}
+        return {"unitary_error_coefficients": _augmented_hex_error_coefficients(U, tau, Lx, Ly, unitary_decomp=unitary_decomp, s2_correctors=s2_correctors)}
     else:
         raise ValueError(f"Invalid argument for type: {type}. Must be one of: \'plaquette\', \'plaquette suzuki-trotter\' or \'plaquette augmented\'.")
 
@@ -59,9 +59,9 @@ def second_order_error_coefficient(U: float, tau: float, Lx: int, Ly: int) -> fl
 
     return U*U*tau * R1 / 24 + 9.9*U*tau**2 * (2*Lx*Ly) / 12 + 0.8532 * tau**3 * (2*Lx*Ly)
 
-def _augmented_hex_error_coefficients(U: float, tau: float, Lx: int, Ly: int, unitary_decomp: bool) -> tuple[float,...]:
+def _augmented_hex_error_coefficients(U: float, tau: float, Lx: int, Ly: int, unitary_decomp: bool, s2_correctors: bool) -> tuple[float,...]:
     split_op_coeffs = hexagonal_augmented_so_coeffs(U, tau, Lx, Ly,  unitary_decomp)
-    free_fermionic_coeffs = _compute_augmented_trotter_error_coeficients_free_fermionic(tau/2, Lx, Ly)
+    free_fermionic_coeffs = _compute_augmented_trotter_error_coeficients_free_fermionic(tau/2, Lx, Ly, s2_correctors)
 
     return add_dicts(split_op_coeffs, free_fermionic_coeffs, scale_2nd=2)
 
@@ -307,7 +307,115 @@ def color_correctors(Lx, Ly) -> tuple[list[float], list[nx.Graph]]:
     _corr = [c(Lx, Ly) for c in [rbr, ryr, byb, bbr, yyr, yyb]] + list(triple_mixed_graphs(Lx, Ly))
     return [1/3,1/12,-1/6], _corr
 
-def _compute_augmented_trotter_error_coeficients_free_fermionic(tau: float, Lx: int, Ly: int) -> tuple[float]:
+"""
+Alternate corrector synth:
+"""
+
+
+def s2_correctors(Lx: int, Ly: int) -> nx.Graph:
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2 * Lx, periodic=True, with_positions=True)
+
+    lx, ly = 2 * Lx, 2 * Ly
+
+    res1 = nx.Graph()
+    res2 = nx.Graph()
+    res3 = nx.Graph()
+    res4 = nx.Graph()
+    res5 = nx.Graph()
+    res6 = nx.Graph()
+
+    res1.add_nodes_from(whole.nodes)
+    res2.add_nodes_from(whole.nodes)
+    res3.add_nodes_from(whole.nodes)
+    res4.add_nodes_from(whole.nodes)
+    res5.add_nodes_from(whole.nodes)
+    res6.add_nodes_from(whole.nodes)
+
+    for i in range(ly):
+        for j in range(Lx):
+            # Centers
+            x = 2 * j + (i % 2)
+            y = i
+            if ((i // 2) % 2):
+                res1.add_edge(
+                    (x, y), ((x + 2) % lx, (y + 1) % ly), weight=1 / 12
+                )
+                res1.add_edge(
+                    (x, y), ((x + 2) % lx, (y - 1) % ly), weight=1 / 12
+                )
+            else:
+                res2.add_edge(
+                    (x, y), ((x + 2) % lx, (y + 1) % ly), weight=1 / 12
+                )
+                res2.add_edge(
+                    (x, y), ((x + 2) % lx, (y - 1) % ly), weight=1 / 12
+                )
+
+            if y % 8 in [0, 1, 2, 3]:
+                res3.add_edge(
+                    (x, y), ((x + 1) % lx, (y + 2) % ly), weight=1 / 6
+                )
+                res3.add_edge(
+                    (x, y), ((x + 1) % lx, (y - 2) % ly), weight=1 / 6
+                )
+
+                res5.add_edge(
+                    (x, y), ((x - 1) % lx, (y + 2) % ly), weight=-1 / 6
+                )
+                res5.add_edge(
+                    (x, y), ((x - 1) % lx, (y - 2) % ly), weight=-1 / 6
+                )
+            else:
+                res4.add_edge(
+                    (x, y), ((x + 1) % lx, (y + 2) % ly), weight=1 / 6
+                )
+                res4.add_edge(
+                    (x, y), ((x + 1) % lx, (y - 2) % ly), weight=1 / 6
+                )
+
+                res6.add_edge(
+                    (x, y), ((x - 1) % lx, (y + 2) % ly), weight=-1 / 6
+                )
+                res6.add_edge(
+                    (x, y), ((x - 1) % lx, (y - 2) % ly), weight=-1 / 6
+                )
+    return res1, res2, res3, res4, res5, res6
+
+
+def s1_correctors(Lx: int, Ly: int) -> nx.Graph:
+    whole = nx.hexagonal_lattice_graph(m=Ly, n=2 * Lx, periodic=True, with_positions=True)
+
+    lx, ly = 2 * Lx, 2 * Ly
+
+    res1 = nx.Graph()
+    res2 = nx.Graph()
+    res3 = nx.Graph()
+
+    res1.add_nodes_from(whole.nodes)
+    res2.add_nodes_from(whole.nodes)
+    res3.add_nodes_from(whole.nodes)
+
+    for i in range(ly):
+        for j in range(Lx):
+            # Centers
+            x = 2 * j + (i % 2)
+            y = i
+            res1.add_edge(
+                (x, y), (x, (y + 3) % ly), weight=1 / 12
+            )
+            res2.add_edge(
+                (x, y), ((x - 1) % lx, y), weight=-1 / 3
+            )
+            res3.add_edge(
+                (x, y), (x, (y - 3) % ly), weight=-1 / 6
+            )
+    return res1, res2, res3
+
+def color_correctors_alternate(Lx, Ly) -> tuple[list[float], list[nx.Graph]]:
+    _corr = [g for g in s2_correctors(Lx, Ly)] +  [g for g in s1_correctors(Lx, Ly)]
+    return [1/3,1/12,-1/6], _corr
+
+def _compute_augmented_trotter_error_coeficients_free_fermionic(tau: float, Lx: int, Ly: int, s2_corr: bool) -> tuple[float]:
 
     A, B, C, H = colored_hexagonal_trotterization(Lx, Ly)
     A = cast_data_to_array(A)
@@ -315,7 +423,10 @@ def _compute_augmented_trotter_error_coeficients_free_fermionic(tau: float, Lx: 
     C = cast_data_to_array(C)
     H = cast_data_to_array(H)
     Gs = [A, B, C]
-    coeffs, correctors = color_correctors(Lx, Ly)
+    if s2_corr:
+        coeffs, correctors = color_correctors_alternate(Lx, Ly)
+    else:
+        coeffs, correctors = color_correctors(Lx, Ly)
     a,b,c = coeffs
     correctors = [cast_data_to_array(x) for x in correctors]
 
