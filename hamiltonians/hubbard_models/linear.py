@@ -1,5 +1,5 @@
 from openfermion import FermionOperator
-from examples._primitives import hubbard_from_nx, spinless_PPP_model, ohno_potential_2d, coulomb_spinless_hamiltonian
+from hamiltonians.primitives import hubbard_from_nx, spinless_PPP_model, ohno_potential_2d, coulomb_spinless_hamiltonian
 
 import networkx as nx
 

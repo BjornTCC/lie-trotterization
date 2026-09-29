@@ -1,7 +1,7 @@
 import networkx as nx
 from openfermion import FermionOperator
 
-from examples._primitives import hubbard_from_nx, spinless_PPP_model, ohno_potential_2d
+from hamiltonians.primitives import hubbard_from_nx, spinless_PPP_model, ohno_potential_2d
 
 def hexagonal_grid_hubbard_model(size: int | tuple[int], h: float = 1.0, U: float = 0.5, periodic: bool = True) -> FermionOperator:
     if isinstance(size, int):
