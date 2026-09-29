@@ -137,6 +137,6 @@ def _simulation_time_and_number_of_calls(
 
         tm = (target_error / unitary_error_coefficients[min_power]) ** (1 / (min_power - 1))
 
-        t, Npe = one_d_optimizer(f,0.00001, tm, strict_positive=True)
+        t, Npe = one_d_optimizer(f,0.000000001, tm, strict_positive=True)
 
         return t, math.ceil(Npe)
