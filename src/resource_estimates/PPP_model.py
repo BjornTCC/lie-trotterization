@@ -1,10 +1,15 @@
 import math
 
-from src.PPP_model.split_operator_coefficients import second_order_coefficient, augmented_coefficients
+from src.PPP_model.split_operator_coefficients import (
+    second_order_coefficient,
+    augmented_coefficients,
+    dominant_augmented_coefficients,
+    dominant_4th_order_coefficients
+)
 
 from src.resource_estimates.gate_costs.protocol import ResourceGate
 from src.resource_estimates.gate_costs.free_fermionic import FreeFermionicS1Tile, FreeFermionicS2Tile, FreeFermionicS3Tile
-from src.resource_estimates.gate_costs.interactions import ShiftedOccupationPair, AncillaOccupationPair
+from src.resource_estimates.gate_costs.interactions import ShiftedOccupationPair, AncillaOccupationPair, AncillaFreeOccupationPair
 from src.resource_estimates.gate_costs.hubbard_commutators import (
     SpinSymmetricMixedControlledKappa,
     SpinSymmetricMixedControlledHappa
@@ -37,8 +42,12 @@ def PPP_hamiltonian_simulation_resources(
     match algorithm:
         case "2nd order":
             error_coeffs = {3: second_order_coefficient(U, v, d, N)}
+        case "4th order":
+            error_coeffs = {5: dominant_4th_order_coefficients(U, v, d, N)}
         case "augmented":
             error_coeffs = augmented_coefficients(U, v, d, N)
+        case "dominant augmented":
+            error_coeffs = dominant_augmented_coefficients(U, v, d, N)
         case _:
             raise NotImplementedError(f"Algorithm {algorithm} not implemented")
 
@@ -70,8 +79,12 @@ def PPP_qpe_resources(
     match algorithm:
         case "2nd order":
             error_coeffs = {3: second_order_coefficient(U, v, d, N)}
+        case "4th order":
+            error_coeffs = {5: dominant_4th_order_coefficients(U, v, d, N)}
         case "augmented":
             error_coeffs = augmented_coefficients(U, v, d, N)
+        case "dominant augmented":
+            error_coeffs = dominant_augmented_coefficients(U, v, d, N)
         case _:
             raise NotImplementedError(f"Algorithm {algorithm} not implemented")
 
@@ -120,7 +133,7 @@ def PPP_model_gates(
             unitary_gates = {
                 FreeFermionicS2Tile(): 5*N // 2,
             }
-        case "augmented":
+        case "augmented" | "dominant augmented":
             trotter_step_gates = {
                 FreeFermionicS1Tile(): 9*N,
                 FreeFermionicS2Tile(): 3*N,

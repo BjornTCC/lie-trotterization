@@ -22,7 +22,7 @@ def augmented_coefficients(
 ) -> dict[int: float]:
     N = num_sites
     d = connectivity
-    v = hopping_strength / 2
+    v = hopping_strength
     V = interaction_strength / 2
     W5 = min(
         d*v*V**4*N**5 * 256 /180
@@ -68,3 +68,42 @@ def augmented_coefficients(
         7: W7,
         9: W9
     }
+
+def dominant_augmented_coefficients(
+    interaction_strength: float,
+    hopping_strength: float,
+    connectivity: int,
+    num_sites: int,
+) -> dict[int: float]:
+    N = num_sites
+    d = connectivity
+    v = hopping_strength
+    V = interaction_strength / 2
+    W5 = d*v*V**4*N**5 * 256 *13 / 5760
+
+    W7 = 0*d**2*v**2 * V**5 * N**6 * 134/2016 + d**3 * v**3 * V**4 * N**5 * 37120 / 2304
+    W9 = 0*12160 * d**4 * v**4 * V**5 * N**6
+
+    W5 +=  4*(2*v*V)*16*d*v*V**2*N**5 /1152
+
+    W6 =  0*(2*N**2 + N*d)**2*(2*v*V)**2 * (8*N+1)*d*v*N*2/13824
+
+    return {
+        5: W5,
+        6: W6,
+        7: W7,
+        9: W9
+    }
+
+def dominant_4th_order_coefficients(
+    interaction_strength: float,
+    hopping_strength: float,
+    connectivity: int,
+    num_sites: int,
+) -> dict[int: float]:
+    N = num_sites
+    d = connectivity
+    v = hopping_strength
+    V = interaction_strength / 2
+
+    return 1.20354158340349 * d*v*V**4*N**5
