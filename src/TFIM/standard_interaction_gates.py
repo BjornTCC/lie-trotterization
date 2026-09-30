@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 
 from src.resource_estimates.gate_costs.protocol import ResourceGate
+from src.resource_estimates.gate_costs.hamming_weight_phasing import HWPGate
 from src.resource_estimates.gate_costs.skew_field_ising_model import (
     XField,
     ZInteraction,
@@ -62,11 +63,17 @@ def gates_from_positions_and_interaction_2nd_order(
         tol: float = 1e-14,
         hwp: bool = False
 ) -> tuple[dict[ResourceGate: int], dict[ResourceGate: int]]:
-    if hwp:
-        raise NotImplementedError()
     N = len(positions)
     num_interactions_per_site = sum([1 for x in positions[1:] if abs(interaction(positions[0], x)) > tol])
     total_interactions = N * num_interactions_per_site // 2
+
+    if hwp:
+        return {
+            HWPGate({ZInteraction(): N // 2}, N // 2): num_interactions_per_site,
+            HWPGate({XField(): N}, N): 1
+        }, {
+            HWPGate({XField(): N}, N): 1
+        }
 
     return {
         ZInteraction(): total_interactions,
@@ -82,11 +89,17 @@ def gates_from_positions_and_interaction_4th_order(
         tol: float = 1e-14,
         hwp: bool = False
 ) -> tuple[dict[ResourceGate: int], dict[ResourceGate: int]]:
-    if hwp:
-        raise NotImplementedError()
     N = len(positions)
     num_interactions_per_site = sum([1 for x in positions[1:] if abs(interaction(positions[0], x)) > tol])
     total_interactions = N * num_interactions_per_site // 2
+
+    if hwp:
+        return {
+            HWPGate({ZInteraction(): N // 2}, N // 2): 5*num_interactions_per_site,
+            HWPGate({XField(): N}, N): 5
+        }, {
+            HWPGate({XField(): N}, N): 1
+        }
 
     return {
         ZInteraction(): 5*total_interactions,
@@ -95,18 +108,25 @@ def gates_from_positions_and_interaction_4th_order(
         XField(): N,
     }
 
-
 def gates_from_positions_and_interaction_augmented(
         positions: np.ndarray,
         interaction: callable,
         tol: float = 1e-14,
         hwp: bool = False
 ) -> tuple[dict[ResourceGate: int], dict[ResourceGate: int]]:
-    if hwp:
-        raise NotImplementedError()
     N = len(positions)
     num_interactions_per_site = sum([1 for x in positions[1:] if abs(interaction(positions[0], x)) > tol])
     total_interactions = N * num_interactions_per_site // 2
+
+    if hwp:
+        return {
+            HWPGate({ZInteraction(): N // 2}, N // 2): num_interactions_per_site,
+            HWPGate({YInteraction(): N // 2}, N // 2): num_interactions_per_site,
+            HWPGate({XField(): N}, N): 2
+        }, {
+            HWPGate({ZInteraction(): N // 2}, N // 2): num_interactions_per_site,
+            HWPGate({ZYInteraction(): N // 2}, N // 2): 2*num_interactions_per_site,
+        }
 
     return {
         ZInteraction(): total_interactions,

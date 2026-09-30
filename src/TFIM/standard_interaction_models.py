@@ -9,6 +9,18 @@ def nearest_neighbor_from_graph(G: nx.Graph, interaction_strength: float) -> tup
 
     return f, np.array(G.nodes)
 
+def one_dimensional_power_law(L: int, interaction_strength: float, alpha: float, max_dist: float = None) -> callable:
+    positions = np.array([[i] for i in range(L)])
+
+    def poly(n1, n2):
+        dist = min(abs(n1-n2), L - n1 - n2)
+        if max_dist is not None and dist > max_dist:
+            return 0.0
+
+        return 0.5*interaction_strength / dist ** alpha
+
+    return poly, positions
+
 def hexagonal_power_law(Lx: int, Ly: int, interaction_strength: float, alpha: float, max_dist: float = None) -> callable:
     G = nx.hexagonal_lattice_graph(m=Ly, n=2*Lx, periodic=True, with_positions=True)
     pos = nx.get_node_attributes(G,'pos')

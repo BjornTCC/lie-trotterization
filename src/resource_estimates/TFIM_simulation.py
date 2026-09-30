@@ -7,6 +7,7 @@ from src.TFIM.split_operator_error_coefficients import (
 )
 from src.TFIM.standard_interaction_models import (
     nearest_neighbor_from_graph,
+    one_dimensional_power_law,
     hexagonal_power_law,
     square_power_law,
     cubic_power_law,
@@ -38,6 +39,7 @@ def TFIM_phase_estimation_resources(
         Ls: list[int] = None,
         max_dist: float = None,
         tol: float = 1e-14,
+        hwp: bool = False,
 ) -> dict[str: int]:
     if isinstance(lattice, nx.Graph):
         interaction, positions = nearest_neighbor_from_graph(lattice, J)
@@ -45,7 +47,10 @@ def TFIM_phase_estimation_resources(
         if not len(Ls) == 2 and (alpha is not None):
             raise ValueError(f"When lattice = honeycomb, please specify Ls = [Lx, Ly] and alpha")
         interaction, positions = hexagonal_power_law(*Ls, J, alpha, max_dist)
-
+    elif lattice == "1d":
+        if not len(Ls) == 1 and (alpha is not None):
+            raise ValueError(f"When lattice = 1d, please specify Ls = [L] and alpha")
+        interaction, positions = one_dimensional_power_law(*Ls, J, alpha, max_dist)
     elif lattice == "square":
         if not len(Ls) == 2 and (alpha is not None):
             raise ValueError(f"When lattice = square, please specify Ls = [Lx, Ly] and alpha")
@@ -63,21 +68,21 @@ def TFIM_phase_estimation_resources(
         case "2nd order":
             error_coeffs = {3: second_order_coefficient(positions, interaction, U)}
             if isinstance(lattice, nx.Graph):
-                gates = gates_from_graph_2nd(G)
+                gates = gates_from_graph_2nd(G, hwp=hwp)
             else:
-                gates = gates_from_positions_and_interaction_2nd_order(positions, interaction, tol)
+                gates = gates_from_positions_and_interaction_2nd_order(positions, interaction, tol, hwp=hwp)
         case "4th order":
             error_coeffs = {5: fourth_order_coefficient(positions, interaction, U)}
             if isinstance(lattice, nx.Graph):
-                gates = gates_from_graph_4th(G)
+                gates = gates_from_graph_4th(G, hwp=hwp)
             else:
-                gates = gates_from_positions_and_interaction_4th_order(positions, interaction, tol)
+                gates = gates_from_positions_and_interaction_4th_order(positions, interaction, tol, hwp=hwp)
         case "augmented":
             error_coeffs = augmented_coefficients(positions, interaction, U, unitary_decomp=False)
             if isinstance(lattice, nx.Graph):
-                gates = gates_from_graph_augmented(G)
+                gates = gates_from_graph_augmented(G, hwp=hwp)
             else:
-                gates = gates_from_positions_and_interaction_augmented(positions, interaction, tol)
+                gates = gates_from_positions_and_interaction_augmented(positions, interaction, tol, hwp=hwp)
         case _:
             raise ValueError(f"Simulation type \"{simulation_type}\" not recognized/implemented")
 
@@ -114,9 +119,14 @@ def TFIM_time_evolution_resources(
         Ls: list[int] = None,
         max_dist: float = None,
         tol: float = 1e-14,
+        hwp: bool = False
 ) -> dict[str: int]:
     if isinstance(lattice, nx.Graph):
         interaction, positions = nearest_neighbor_from_graph(lattice, J)
+    elif lattice == "1d":
+        if not len(Ls) == 1 and (alpha is not None):
+            raise ValueError(f"When lattice = 1d, please specify Ls = [L] and alpha")
+        interaction, positions = one_dimensional_power_law(*Ls, J, alpha, max_dist)
     elif lattice == "honeycomb":
         if not len(Ls) == 2 and (alpha is not None):
             raise ValueError(f"When lattice = honeycomb, please specify Ls = [Lx, Ly] and alpha")
@@ -139,21 +149,21 @@ def TFIM_time_evolution_resources(
         case "2nd order":
             error_coeffs = {3: second_order_coefficient(positions, interaction, U)}
             if isinstance(lattice, nx.Graph):
-                gates = gates_from_graph_2nd(G)
+                gates = gates_from_graph_2nd(G, hwp=hwp)
             else:
-                gates = gates_from_positions_and_interaction_2nd_order(positions, interaction, tol)
+                gates = gates_from_positions_and_interaction_2nd_order(positions, interaction, tol, hwp=hwp)
         case "4th order":
             error_coeffs = {5: fourth_order_coefficient(positions, interaction, U)}
             if isinstance(lattice, nx.Graph):
-                gates = gates_from_graph_4th(G)
+                gates = gates_from_graph_4th(G, hwp=hwp)
             else:
-                gates = gates_from_positions_and_interaction_4th_order(positions, interaction, tol)
+                gates = gates_from_positions_and_interaction_4th_order(positions, interaction, tol, hwp=hwp)
         case "augmented":
             error_coeffs = augmented_coefficients(positions, interaction, U, unitary_decomp=True)
             if isinstance(lattice, nx.Graph):
-                gates = gates_from_graph_augmented(G)
+                gates = gates_from_graph_augmented(G, hwp=hwp)
             else:
-                gates = gates_from_positions_and_interaction_augmented(positions, interaction, tol)
+                gates = gates_from_positions_and_interaction_augmented(positions, interaction, tol, hwp=hwp)
         case _:
             raise ValueError(f"Simulation type \"{simulation_type}\" not recognized/implemented")
 
