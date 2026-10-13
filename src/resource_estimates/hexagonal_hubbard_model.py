@@ -6,7 +6,7 @@ from src.hubbard_models.hexagonal_hubbard import (
 )
 
 from src.resource_estimates.gate_costs.protocol import ResourceGate
-from src.resource_estimates.gate_costs.free_fermionic import FreeFermionicS1Tile, FreeFermionicS2Tile, FreeFermionicS3Tile
+from src.resource_estimates.gate_costs.free_fermionic import FreeFermionicS1Tile, FreeFermionicS2Tile, FreeFermionicA4Tile
 from src.resource_estimates.gate_costs.interactions import ShiftedOccupationPair
 from src.resource_estimates.gate_costs.hubbard_commutators import (
     SpinSymmetricMixedControlledKappa,
@@ -36,7 +36,6 @@ def hubbard_model_phase_estimation_resources(
         x: float | None = None,
         synthesize_rotation_with: str = "RUS",
         hwp: bool = False,
-        s2_correctors: bool = True,
 ) -> dict[str: int]:
     if time_evolution_algorithm == "qubitization":
         return get_qubitization_gate_counts(U, tau, Lx, Ly, target_error)
@@ -48,9 +47,8 @@ def hubbard_model_phase_estimation_resources(
         Ly,
         time_evolution_algorithm,
         unitary_decomp=False,
-        s2_correctors=s2_correctors
     )
-    trotter_step_gates, unitary_gates = get_qpe_gate_set(time_evolution_algorithm, Lx, Ly, hwp, s2_correctors = s2_correctors)
+    trotter_step_gates, unitary_gates = get_qpe_gate_set(time_evolution_algorithm, Lx, Ly, hwp)
 
     match phase_estimation_algorithm:
         case "adaptive":
@@ -86,7 +84,6 @@ def hubbard_model_time_evolution_resources(
         x: float | None = None,
         synthesize_rotation_with: str = "RUS",
         hwp: bool = False,
-        s2_correctors: bool = True,
 ) -> dict[str: int]:
     extra_kwargs = compute_number_of_trotter_steps_kwargs(
         t,
@@ -96,9 +93,8 @@ def hubbard_model_time_evolution_resources(
         Lx,
         Ly,
         algorithm,
-        s2_correctors=s2_correctors
     )
-    trotter_step_gates, unitary_gates = get_time_evolution_gate_set(algorithm, Lx, Ly, hwp, s2_correctors=s2_correctors)
+    trotter_step_gates, unitary_gates = get_time_evolution_gate_set(algorithm, Lx, Ly, hwp)
 
     return hamiltonian_simulation_cost(
         t,
@@ -110,7 +106,7 @@ def hubbard_model_time_evolution_resources(
         synthesize_rotation_with=synthesize_rotation_with
     )
 
-def get_qpe_gate_set(type: str, Lx: int, Ly: int, hwp: bool, s2_correctors: bool = True) -> tuple[dict[ResourceGate: int], ...]:
+def get_qpe_gate_set(type: str, Lx: int, Ly: int, hwp: bool) -> tuple[dict[ResourceGate: int], ...]:
     N = 2*Lx*Ly
     match type:
         case "tile":
@@ -159,81 +155,56 @@ def get_qpe_gate_set(type: str, Lx: int, Ly: int, hwp: bool, s2_correctors: bool
                 }
         case "augmented tile":
             if hwp:
-                if s2_correctors:
-                    trotter_step_gates = {
-                        HWPGate(
-                            {FreeFermionicS1Tile(): N},
-                            2*N
-                        ): 9,
-                        HWPGate(
-                            {FreeFermionicS2Tile(): N},
-                            2 * N
-                        ): 3,
-                        HWPGate({ShiftedOccupationPair(): N}, N): 2,
-                        HWPGate({SpinSymmetricMixedControlledHappa(): N // 2}, N): 3,
-                    }
-                    unitary_gates = {
-                        HWPGate(
-                            {FreeFermionicS1Tile(): N},
-                            2*N
-                        ): 15,
-                        HWPGate({SpinSymmetricMixedControlledKappa(): N // 2}, N): 3,
-                    }
-                else:
-                    trotter_step_gates = {
-                        HWPGate(
-                            {FreeFermionicS1Tile(): N},
-                            2*N
-                        ): 15,
-                        HWPGate({ShiftedOccupationPair(): N}, N): 2,
-                        HWPGate({SpinSymmetricMixedControlledHappa(): N // 2}, N): 3,
-                    }
-                    unitary_gates = {
-                        HWPGate(
-                            {FreeFermionicS1Tile(): N},
-                            2*N
-                        ): 15,
-                        HWPGate({SpinSymmetricMixedControlledKappa(): N // 2}, N): 3,
-                    }
+                trotter_step_gates = {
+                    HWPGate(
+                        {FreeFermionicS1Tile(): N},
+                        2*N
+                    ): 9,
+                    HWPGate(
+                        {FreeFermionicS2Tile(): N},
+                        2 * N
+                    ): 1,
+                    HWPGate(
+                        {FreeFermionicA4Tile(): N},
+                        2 * N
+                    ): 1,
+                    HWPGate({ShiftedOccupationPair(): N}, N): 2,
+                    HWPGate({SpinSymmetricMixedControlledHappa(): N // 2}, N): 3,
+                }
+                unitary_gates = {
+                    HWPGate(
+                        {FreeFermionicS1Tile(): N},
+                        2*N
+                    ): 15,
+                    HWPGate({SpinSymmetricMixedControlledKappa(): N // 2}, N): 3,
+                }
             else:
-                if s2_correctors:
-                    trotter_step_gates = {
-                        ParallelizedResourceGate(
+                trotter_step_gates = {
+                    ParallelizedResourceGate(
+                        {FreeFermionicS1Tile(): N}
+                    ): 9,
+                    ParallelizedResourceGate(
                             {FreeFermionicS1Tile(): N}
-                        ): 9,
-                        ParallelizedResourceGate(
-                                {FreeFermionicS1Tile(): N}
-                            ): 3,
-                        ParallelizedResourceGate({ShiftedOccupationPair(): N}): 2,
-                        ParallelizedResourceGate({SpinSymmetricMixedControlledHappa(): N}): 3,
-                    }
-                    unitary_gates = {
-                        ParallelizedResourceGate(
-                            {FreeFermionicS1Tile(): N}
-                        ): 15,
-                        ParallelizedResourceGate({SpinSymmetricMixedControlledKappa(): N}): 3,
-                    }
-                else:
-                    trotter_step_gates = {
-                        ParallelizedResourceGate(
-                            {FreeFermionicS1Tile(): N}
-                        ): 15,
-                        ParallelizedResourceGate({ShiftedOccupationPair(): N}): 2,
-                        ParallelizedResourceGate({SpinSymmetricMixedControlledHappa(): N}): 3,
-                    }
-                    unitary_gates = {
-                        ParallelizedResourceGate(
-                            {FreeFermionicS1Tile(): N}
-                        ): 15,
-                        ParallelizedResourceGate({SpinSymmetricMixedControlledKappa(): N}): 3,
-                    }
+                        ): 1,
+                    ParallelizedResourceGate(
+                            {FreeFermionicA4Tile(): N}
+                        ): 1,
+                    ParallelizedResourceGate({ShiftedOccupationPair(): N}): 2,
+                    ParallelizedResourceGate({SpinSymmetricMixedControlledHappa(): N}): 3,
+                }
+                unitary_gates = {
+                    ParallelizedResourceGate(
+                        {FreeFermionicS1Tile(): N}
+                    ): 15,
+                    ParallelizedResourceGate({SpinSymmetricMixedControlledKappa(): N}): 3,
+                }
         case _:
             raise ValueError(f"Unrecognized time evolution algorithm: {type}")
 
     return trotter_step_gates, unitary_gates
 
 def get_time_evolution_gate_set(type: str, Lx: int, Ly: int, hwp: bool, s2_correctors: bool = True) -> tuple[dict[ResourceGate: int], ...]:
-    res1, res2 = get_qpe_gate_set(type, Lx, Ly, hwp, s2_correctors=s2_correctors)
+    res1, res2 = get_qpe_gate_set(type, Lx, Ly, hwp)
     if type == "augmented tile":
         for x in res2.keys():
             res2[x] *= 2

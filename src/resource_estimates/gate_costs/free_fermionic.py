@@ -175,6 +175,37 @@ class ControlledFreeFermionicS4Tile(ResourceGate):
         self._t_depth = 4 * fgate.t_depth
         self._rotation_depth = 1
 
+class FreeFermionicA4Tile(ResourceGate):
+
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._t = 6*fgate.t
+        self._tdg = 6*fgate.tdg
+        self._h = 8+ 6*fgate.h
+        self._s = 6 + 6 * fgate.s
+        self._cx = 2 + 6*fgate.cx
+        self._fswap = 2
+
+        self._t_depth = 4*fgate.t_depth
+        self._rotation_depth = 1
+
+    def symmetric_controlled(self) -> ResourceGate:
+        return ControlledFreeFermionicA4Tile()
+
+class ControlledFreeFermionicA4Tile(ResourceGate):
+
+    def __post_init__(self) -> None:
+        self._rz = 2
+        self._t = 6 * fgate.t
+        self._tdg = 6 * fgate.tdg
+        self._h = 8 + 6 * fgate.h
+        self._s = 6 + 6 * fgate.s
+        self._cx = 6 + 6 * fgate.cx
+        self._fswap = 2
+
+        self._t_depth = 4 * fgate.t_depth
+        self._rotation_depth = 1
+
 class FreeFermionicC4Tile(ResourceGate):
     def __post_init__(self) -> None:
         self._rz = 2
