@@ -34,8 +34,8 @@ def augmented_coefficients(sites: np.ndarray, interaction: callable, U: float, u
     I = _compute_moment(interaction_vals, 1)
 
     W5 = N * (1.65 * I * U**4 + 3.65 * I**2 * U**3 + (3.6 + 0.38)*I**3 * U**2 + 0.58 * I**4 * U)
-    W7 = N * (14.3 * I**2 * U**5 + (1.78 + 1.78) * I**3 * U**4 + (0.508 + 1.53) * I**4 * U**3)
-    W9 = N * ((57.5 + 58.7) * I**3 * U**6 + (0.24 + 0.47 + 0.24 + 0.35 + 1.16) * I**4 * U**5)
+    W7 = N * (2.72 * I**2 * U**5 + 3.56 * I**3 * U**4 + 2.038 * I**4 * U**3)
+    W9 = N * (4.84 * I**3 * U**6 + 2.46 * I**4 * U**5)
 
     if unitary_decomp:
         I2 = _compute_moment(interaction_vals, 2)
